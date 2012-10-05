@@ -1,0 +1,32 @@
+  <Project name="ModInvokeModule" frameworkVersion="v3_5" path="addon-modules/modinvoke/ModInvoke" type="Library">
+     <Configuration name="Debug">
+       <Options>
+         <OutputPath>../../../bin/</OutputPath>
+       </Options>
+     </Configuration>
+     <Configuration name="Release">
+       <Options>
+         <OutputPath>../../../bin/</OutputPath>
+       </Options>
+     </Configuration>
+
+    <!-- ModInvoke Module -->
+
+    <ReferencePath>../../../bin/</ReferencePath>
+    <Reference name="Mono.Addins.dll" localCopy="false" />
+    <Reference name="log4net.dll" localCopy="false" />
+    <Reference name="System" localCopy="false"/>
+    <Reference name="System.Drawing" localCopy="false"/>
+    <Reference name="Nini.dll" localCopy="false"/>
+    <Reference name="OpenSim.Framework" localCopy="false"/>
+    <Reference name="OpenSim.Framework.Communications" localCopy="false"/>
+    <Reference name="OpenSim.Framework.Console" localCopy="false"/>
+    <Reference name="OpenSim.Region.CoreModules" localCopy="false"/>
+    <Reference name="OpenSim.Region.Framework" localCopy="false"/>
+    <Reference name="OpenMetaverseTypes.dll" localCopy="false"/>
+    <Reference name="OpenMetaverse.StructuredData" localCopy="false"/>
+    <Reference name="OpenMetaverse.dll" localCopy="false"/>
+    <Files>
+      <Match pattern="*.cs" recurse="true"/>
+    </Files>
+  </Project>
