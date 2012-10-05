@@ -1,0 +1,8 @@
+scisim-addons
+=============
+
+This repository contains a number of OpenSimulator region modules developed
+for the ScienceSim grid. In general, the modules are intended to enable 
+the use of OpenSim as a platform for collaborative visualization though 
+in some cases their usefulness extends far beyond the educational domain.
+
