@@ -48,6 +48,7 @@ using Mono.Addins;
 using System;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
 using log4net;
@@ -96,6 +97,9 @@ namespace RemoteControl.Handlers
         {
             //m_log.DebugFormat("[ObjectHandlers] unregister methods");
 
+            m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(FindObjectsRequest));
+
+            m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectDataRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectPositionRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(SetObjectPositionRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectRotationRequest));
@@ -106,6 +110,7 @@ namespace RemoteControl.Handlers
 
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(CreateObjectRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(DeleteObjectRequest));
+            m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(DeleteAllObjectsRequest));
         }
 
         // -----------------------------------------------------------------
@@ -116,13 +121,18 @@ namespace RemoteControl.Handlers
         // -----------------------------------------------------------------
         public override void RegisterHandlers()
         {
-            //m_log.DebugFormat("[ObjectHandlers] register methods");
+            //m_log.WarnFormat("[ObjectHandlers] register methods");
             
+            m_dispatcher.RegisterMessageType(typeof(FindObjectsResponse));
             m_dispatcher.RegisterMessageType(typeof(GetObjectPartsResponse));
+            m_dispatcher.RegisterMessageType(typeof(GetObjectDataResponse));
             m_dispatcher.RegisterMessageType(typeof(ObjectPositionResponse));
             m_dispatcher.RegisterMessageType(typeof(ObjectRotationResponse));
             m_dispatcher.RegisterMessageType(typeof(CreateObjectResponse));
 
+            m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(FindObjectsRequest),FindObjectsHandler);
+
+            m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectDataRequest),GetObjectDataHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectPositionRequest),GetObjectPositionHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(SetObjectPositionRequest),SetObjectPositionHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectRotationRequest),GetObjectRotationHandler);
@@ -133,10 +143,49 @@ namespace RemoteControl.Handlers
 
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(CreateObjectRequest),CreateObjectHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(DeleteObjectRequest),DeleteObjectHandler);
+            m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(DeleteAllObjectsRequest),DeleteAllObjectsHandler);
         }
 #endregion
 
 #region Object Handlers
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public Dispatcher.Messages.ResponseBase FindObjectsHandler(Dispatcher.Messages.RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(FindObjectsRequest))
+                return OperationFailed("wrong type of request object");
+            
+            FindObjectsRequest request = (FindObjectsRequest)irequest;
+
+            // Set up the bounding box such that min.X <= max.X, min.Y <= max.Y, min.Z <= max.Z
+            Vector3 min = new Vector3(0.0f, 0.0f, 0.0f);
+            Vector3 max = new Vector3(Constants.RegionSize, Constants.RegionSize, float.MaxValue);
+
+            min.X = Math.Min(request.CoordinateA.X, request.CoordinateB.X);
+            min.Y = Math.Min(request.CoordinateA.Y, request.CoordinateB.Y);
+            min.Z = Math.Min(request.CoordinateA.Z, request.CoordinateB.Z);
+
+            max.X = Math.Max(request.CoordinateA.X,request.CoordinateB.X);
+            max.Y = Math.Max(request.CoordinateA.Y,request.CoordinateB.Y);
+            max.Z = Math.Max(request.CoordinateA.Z,request.CoordinateB.Z);
+
+            // Set up the pattern
+            Regex pattern = null;
+            if (! String.IsNullOrEmpty(request.Pattern))
+                pattern = new Regex(request.Pattern);
+                
+            Predicate<SceneObjectGroup> pred = sog => SearchPredicate(sog, min, max, pattern, request.OwnerID);
+            List<SceneObjectGroup> sceneObjects = m_scene.GetSceneObjectGroups().FindAll(pred);
+
+            FindObjectsResponse resp = new FindObjectsResponse();
+            foreach (SceneObjectGroup sog in sceneObjects)
+                resp.Objects.Add(sog.UUID);
+
+            return resp;
+        }
+        
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>
@@ -185,6 +234,21 @@ namespace RemoteControl.Handlers
                 return OperationFailed("no such object");
 
             m_scene.DeleteSceneObject(sog,false,true);
+
+            return new Dispatcher.Messages.ResponseBase(ResponseCode.Success,"");
+        }
+        
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public Dispatcher.Messages.ResponseBase DeleteAllObjectsHandler(Dispatcher.Messages.RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(DeleteAllObjectsRequest))
+                return OperationFailed("wrong type of request object");
+            
+            DeleteAllObjectsRequest request = (DeleteAllObjectsRequest)irequest;
+            m_scene.DeleteAllSceneObjects();
 
             return new Dispatcher.Messages.ResponseBase(ResponseCode.Success,"");
         }
@@ -262,6 +326,24 @@ namespace RemoteControl.Handlers
             return new Dispatcher.Messages.ResponseBase(ResponseCode.Success,"");
         }
 
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public Dispatcher.Messages.ResponseBase GetObjectDataHandler(Dispatcher.Messages.RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(GetObjectDataRequest))
+                return OperationFailed("wrong type");
+
+            GetObjectDataRequest request = (GetObjectDataRequest)irequest;
+
+            SceneObjectGroup sog = m_scene.GetSceneObjectGroup(request.ObjectID);
+            if (sog == null)
+                return OperationFailed("no such object");
+
+            return new GetObjectDataResponse(request.ObjectID,sog.Name,sog.AbsolutePosition,sog.GroupRotation,sog.OwnerID);
+        }
+        
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>
@@ -372,6 +454,24 @@ namespace RemoteControl.Handlers
             }
             
             return group;
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        private bool SearchPredicate(SceneObjectGroup sog, Vector3 min, Vector3 max, Regex pattern, UUID ownerID)
+        {
+            if (! Util.IsInsideBox(sog.AbsolutePosition, min, max))
+                return false;
+
+            if (pattern != null && ! pattern.IsMatch(sog.Name))
+                return false;
+            
+            if (ownerID != UUID.Zero && ownerID != sog.OwnerID)
+                return false;
+            
+            return true;
         }
     }
 #endregion

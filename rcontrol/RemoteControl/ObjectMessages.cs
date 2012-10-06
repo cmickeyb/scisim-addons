@@ -65,6 +65,51 @@ using Newtonsoft.Json.Linq;
 namespace RemoteControl.Messages
 {
     // -----------------------------------------------------------------
+    // ObjectQuery Messages
+    // -----------------------------------------------------------------
+
+    /// <summary>
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class FindObjectsRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public String Pattern { get; set; }
+
+        [JsonProperty]
+        public Vector3 CoordinateA { get; set; }
+
+        [JsonProperty]
+        public Vector3 CoordinateB { get; set; }
+        
+        [JsonProperty]
+        public UUID OwnerID { get; set; }
+
+        public FindObjectsRequest()
+        {
+            CoordinateA = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+            CoordinateB = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            Pattern = String.Empty;
+            OwnerID = UUID.Zero;
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class FindObjectsResponse : Dispatcher.Messages.ResponseBase
+    {
+        [JsonProperty]
+        public List<UUID> Objects { get; set; }
+        
+        public FindObjectsResponse() : base(ResponseCode.Success,"")
+        {
+            Objects = new List<UUID>();
+        }
+    }
+
+    // -----------------------------------------------------------------
     // ObjectPosition Messages
     // -----------------------------------------------------------------
 
@@ -129,6 +174,52 @@ namespace RemoteControl.Messages
         public GetObjectPartsResponse() : base(ResponseCode.Success,"")
         {
             Parts = new List<PartInformation>();
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetObjectDataRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public UUID ObjectID { get; set; }
+
+        public GetObjectDataRequest()
+        {
+            ObjectID = UUID.Zero;
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetObjectDataResponse : Dispatcher.Messages.ResponseBase
+    {
+        [JsonProperty]
+        public UUID ObjectID { get; set; }
+
+        [JsonProperty]
+        public String Name { get; set; }
+
+        [JsonProperty]
+        public Vector3 Position { get; set; }
+
+        [JsonProperty]
+        public Quaternion Rotation { get; set; }
+
+        [JsonProperty]
+        public UUID OwnerID { get; set; }
+
+        public GetObjectDataResponse(UUID oid, string name, Vector3 pos, Quaternion rot, UUID owner) : base(ResponseCode.Success,"")
+        {
+            ObjectID = oid;
+            Name = name;
+            Position = pos;
+            Rotation = rot;
+            OwnerID = owner;
         }
     }
 
@@ -245,6 +336,15 @@ namespace RemoteControl.Messages
     // -----------------------------------------------------------------
     // Object Creation Messages
     // -----------------------------------------------------------------
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class DeleteAllObjectsRequest : Dispatcher.Messages.RequestBase
+    {
+        public DeleteAllObjectsRequest() {}
+    }
 
     /// <summary>
     ///    

@@ -86,6 +86,7 @@ our $VERSION = sprintf "%s", '$Revision: 1.0 $ ' =~ /\$Revision:\s+([^\s]+)/;
 package RemoteControl;
 
 use Carp;
+use JSON;
 
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64;
@@ -245,6 +246,23 @@ sub SetAvatarAppearance
 }
 
 # -----------------------------------------------------------------
+# NAME: FindObjects
+# -----------------------------------------------------------------
+sub FindObjects
+{
+    my $self = shift;
+    my ($coord1, $coord2, $pattern, $owner) = @_;
+
+    my $params = {};
+    $params->{'CoordinateA'} = $coord1 if defined $coord1 && @{$coord1};
+    $params->{'CoordinateB'} = $coord2 if defined $coord2 && @{$coord2};
+    $params->{'Pattern'} = $pattern if defined $pattern;
+    $params->{'OwnerID'} = $owner if defined $owner;
+
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.FindObjectsRequest',$params);
+}
+
+# -----------------------------------------------------------------
 # NAME: CreateObject
 # -----------------------------------------------------------------
 sub CreateObject
@@ -279,6 +297,17 @@ sub DeleteObject
 }
 
 # -----------------------------------------------------------------
+# NAME: DeleteAllObject
+# -----------------------------------------------------------------
+sub DeleteAllObjects
+{
+    my $self = shift;
+
+    my $params = {};
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.DeleteAllObjectsRequest',$params);
+}
+
+# -----------------------------------------------------------------
 # NAME: GetObjectParts
 # -----------------------------------------------------------------
 sub GetObjectParts
@@ -290,6 +319,20 @@ sub GetObjectParts
     $params->{'ObjectID'} = $object;
 
     return $self->_PostRequest('RemoteControl','RemoteControl.Messages.GetObjectPartsRequest',$params);
+}
+
+# -----------------------------------------------------------------
+# NAME: GetObjectData
+# -----------------------------------------------------------------
+sub GetObjectData
+{
+    my $self = shift;
+    my ($object) = @_;
+
+    my $params = {};
+    $params->{'ObjectID'} = $object;
+
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.GetObjectDataRequest',$params);
 }
 
 # -----------------------------------------------------------------

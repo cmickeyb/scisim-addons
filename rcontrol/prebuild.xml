@@ -1,4 +1,4 @@
-  <Project name="RemoteControlModule" frameworkVersion="v3_5" path="addon-modules/remote-control/RemoteControl" type="Library">
+  <Project name="RemoteControlModule" frameworkVersion="v3_5" path="addon-modules/rcontrol/RemoteControl" type="Library">
      <Configuration name="Debug">
        <Options>
          <OutputPath>../../../bin/</OutputPath>

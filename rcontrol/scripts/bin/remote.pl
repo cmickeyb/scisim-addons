@@ -256,6 +256,43 @@ sub cAUTHENTICATE
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
+$gCmdinfo->AddCommand('info','get binding information from the dispatcher');
+
+sub cINFO
+{
+    if (! GetOptions(%{$gOptions}))
+    {
+	$gCmdinfo->DumpCommands('info',"Unknown option");
+    }
+
+    &CheckGlobals("info");
+    $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+
+    my $result = $gRemoteControl->Info();
+    if ($result->{_Success} <= 0)
+    {
+        print STDERR "Operation failed; " . $result->{_Message} . "\n";
+    }
+
+    print "AsyncEndpoint=" . $result->{'AsyncEndPoint'} . "\n";
+    print "SynchEndpoint=" . $result->{'SynchEndPoint'} . "\n";
+
+    print "Scenes\n";
+    foreach my $scene (@{$result->{'SceneList'}})
+    {
+        print "\t$scene\n";
+    }
+
+    print "Messages\n";
+    foreach my $msg (@{$result->{'MessageList'}})
+    {
+        print "\t$msg\n";
+    }
+    
+}
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
 $gCmdinfo->AddCommand('chat','post a chat message in world');
 $gCmdinfo->AddCommandParams('chat','-m|--message', ' <string>','message to send');
 $gCmdinfo->AddCommandParams('chat','-l|--location', ' x y z','position from which to say the message');
@@ -283,6 +320,48 @@ sub cREMOTECHAT
     if ($result->{_Success} <= 0)
     {
         print STDERR "Operation failed; " . $result->{_Message} . "\n";
+    }
+}
+
+# -----------------------------------------------------------------
+# NAME: cFINDOBJECTS
+# DESC: 
+# -----------------------------------------------------------------
+$gCmdinfo->AddCommand('find','find objects in the scene that match a query');
+
+sub cFINDOBJECTS
+{
+    my @gCoordA = ();
+    my @gCoordB = ();
+    my $gOwner;
+    my $gPattern;
+
+    $gOptions->{'min=f{3}'} = \@gCoordA;
+    $gOptions->{'max=f{3}'} = \@gCoordB;
+    $gOptions->{'pattern=s'} = \$gPattern;
+    $gOptions->{'owner=s'} = \$gOwner;
+    
+    if (! GetOptions(%{$gOptions}))
+    {
+	$gCmdinfo->DumpCommands('find',"Unknown option");
+    }
+
+    &CheckGlobals('find');
+    $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+    
+    my $result = $gRemoteControl->FindObjects(\@gCoordA,\@gCoordB,$gPattern,$gOwner);
+    if ($result->{_Success} <= 0)
+    {
+        print STDERR "Operation failed; " . $result->{_Message} . "\n";
+    }
+
+    foreach my $obj (@{$result->{Objects}})
+    {
+        my $details = $gRemoteControl->GetObjectData($obj);
+        if ($details->{_Success} > 0)
+        {
+            printf("%s\t%s\t<%03.2f,%03.2f,%03.2f>\n",$details->{Name},$details->{OwnerID},@{$details->{Position}});
+        }
     }
 }
 
@@ -616,9 +695,12 @@ sub Main
     my $paramCmd = ($#ARGV >= 0) ? shift @ARGV : "HELP";
     
     &cAUTHENTICATE, exit	if ($paramCmd =~ m/^auth$/i);
-
+    &cINFO, exit		if ($paramCmd =~ m/^info$/i);
+    
     &cREMOTECHAT, exit		if ($paramCmd =~ m/^chat$/i);
 
+    &cFINDOBJECTS, exit		if ($paramCmd =~ m/^find$/i);
+    &cCREATEFROMASSET, exit	if ($paramCmd =~ m/^create$/i);
     &cCREATEFROMASSET, exit	if ($paramCmd =~ m/^create$/i);
     &cDELETEOBJECT, exit	if ($paramCmd =~ m/^delete$/i);
     &cDUMPOBJECT, exit		if ($paramCmd =~ m/^dump$/i);
