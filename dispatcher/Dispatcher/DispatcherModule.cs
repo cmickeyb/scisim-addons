@@ -113,10 +113,12 @@ namespace Dispatcher
         private Queue<RequestBase> m_requestQueue = new Queue<RequestBase>();
         private int m_requestThreads = 0;
         private int m_maxRequestThreads = 2;
-        
+
+        public Dictionary<string,OperationHandler> HandlerRegistry { get { return m_HandlerRegistry; } }
         private Dictionary<string,OperationHandler> m_HandlerRegistry =
             new Dictionary<string,OperationHandler>();
 
+        public Dictionary<string,OperationHandler> PreHandlerRegistry { get { return m_PreHandlerRegistry; } }
         private Dictionary<string,OperationHandler> m_PreHandlerRegistry =
             new Dictionary<string,OperationHandler>();
 

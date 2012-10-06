@@ -126,7 +126,11 @@ namespace Dispatcher.Handlers
             foreach (KeyValuePair<string,Scene> kvp in m_sceneCache)
                 scenes.Add(kvp.Key);
             
-            return new InfoResponse(m_dispatcher.AsyncBinding,m_dispatcher.SyncBinding,scenes);
+            List<string> msgs = new List<string>();
+            foreach (KeyValuePair<string,OperationHandler> mvp in m_dispatcher.HandlerRegistry)
+                msgs.Add(mvp.Key);
+
+            return new InfoResponse(m_dispatcher.AsyncBinding,m_dispatcher.SyncBinding,scenes,msgs);
         }
 #endregion
     }

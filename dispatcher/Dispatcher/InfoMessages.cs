@@ -93,15 +93,19 @@ namespace Dispatcher.Messages
         [JsonProperty]
         public List<string> SceneList { get; set; }
 
+        [JsonProperty]
+        public List<string> MessageList { get; set; }
+
         // -----------------------------------------------------------------
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        public InfoResponse(string aendpoint, string sendpoint, List<string> scenes) : base(ResponseCode.Success,"")
+        public InfoResponse(string aendpoint, string sendpoint, List<string> scenes, List<string> msgs) : base(ResponseCode.Success,"")
         {
             AsyncEndPoint = aendpoint;
             SynchEndPoint = sendpoint;
             SceneList = scenes;
+            MessageList = msgs;
         }
     }
 }
