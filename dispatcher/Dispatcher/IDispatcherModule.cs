@@ -72,5 +72,8 @@ namespace Dispatcher
 
         bool RegisterMessageType(Type messagetype);
         bool UnregisterMessageType(Type messagetype);
+
+        string AsyncBinding { get; }
+        string SyncBinding { get; }
     }
 }
