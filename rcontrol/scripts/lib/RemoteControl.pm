@@ -504,6 +504,22 @@ sub UnregisterTouchCallback
 }
 
 # -----------------------------------------------------------------
+# NAME: SensorDataRequest
+# -----------------------------------------------------------------
+sub SensorDataRequest
+{
+    my $self = shift;
+    my ($request, $sensor, $values) = @_;
+
+    my $params = {};
+    $params->{'RequestID'} = $request;
+    $params->{'SensorID'} = $sensor;
+    $params->{'SensorData'} = $values;
+
+    return $self->_PostRequest('RemoteSensor','RemoteSensor.Messages.SensorDataRequest',$params);
+}
+
+# -----------------------------------------------------------------
 # NAME: new
 # DESC: Constructor for the object, attributes listed in gAutoFields
 # can be initialized here.
