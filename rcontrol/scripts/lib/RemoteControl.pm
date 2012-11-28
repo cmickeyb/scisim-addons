@@ -155,6 +155,19 @@ sub Info
 }
 
 # -----------------------------------------------------------------
+# NAME: MessageFormatRequest
+# -----------------------------------------------------------------
+sub MessageFormatRequest
+{
+    my $self = shift;
+    my ($message) = @_;
+
+    my $params = {};
+    $params->{'MessageName'} = $message;
+    return $self->_PostRequest('Dispatcher','Dispatcher.Messages.MessageFormatRequest',$params);
+}
+
+# -----------------------------------------------------------------
 # NAME: CreateEndPoint
 # -----------------------------------------------------------------
 sub CreateEndPoint

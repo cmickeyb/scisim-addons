@@ -110,6 +110,11 @@ namespace Dispatcher.Messages
                 NameToType.Remove(messagetype.FullName);
         }
                 
+        public static bool FindRegisteredTypeByName(string fullname, out Type messagetype)
+        {
+            return NameToType.TryGetValue(fullname,out messagetype);
+        }
+
         // -----------------------------------------------------------------
         /// <summary>
         /// 

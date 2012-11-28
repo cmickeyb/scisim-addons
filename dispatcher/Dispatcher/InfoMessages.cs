@@ -71,12 +71,24 @@ namespace Dispatcher.Messages
     {
         // -----------------------------------------------------------------
         /// <summary>
-        /// 
         /// </summary>
         // -----------------------------------------------------------------
-        public InfoRequest()
-        {
-        }
+        public InfoRequest() { }
+    }
+    
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class MessageFormatRequest : RequestBase
+    {
+        [JsonProperty]
+        public string MessageName;
+
+        // -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public MessageFormatRequest() { }
     }
     
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -106,6 +118,24 @@ namespace Dispatcher.Messages
             SynchEndPoint = sendpoint;
             SceneList = scenes;
             MessageList = msgs;
+        }
+    }
+
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class MessageFormatResponse : ResponseBase
+    {
+        [JsonProperty]
+        public String SampleMessage { get; set; }
+
+        // -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public MessageFormatResponse(string sample) : base(ResponseCode.Success,"")
+        {
+            SampleMessage = sample;
         }
     }
 }

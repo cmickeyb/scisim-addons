@@ -293,6 +293,32 @@ sub cINFO
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
+$gCmdinfo->AddCommand('message','get an example of a message from the server');
+
+sub cMESSAGEFORMAT
+{
+    my $gMessage;
+    $gOptions->{'m|message=s'} = \$gMessage;
+
+    if (! GetOptions(%{$gOptions}))
+    {
+	$gCmdinfo->DumpCommands('info',"Unknown option");
+    }
+
+    &CheckGlobals("message");
+    $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+
+    my $result = $gRemoteControl->MessageFormatRequest($gMessage);
+    if ($result->{_Success} <= 0)
+    {
+        print STDERR "Operation failed; " . $result->{_Message} . "\n";
+    }
+
+    print to_json(decode_json($result->{'SampleMessage'}),{pretty => 1});
+}
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
 $gCmdinfo->AddCommand('chat','post a chat message in world');
 $gCmdinfo->AddCommandParams('chat','-m|--message', ' <string>','message to send');
 $gCmdinfo->AddCommandParams('chat','-l|--location', ' x y z','position from which to say the message');
@@ -696,6 +722,7 @@ sub Main
     
     &cAUTHENTICATE, exit	if ($paramCmd =~ m/^auth$/i);
     &cINFO, exit		if ($paramCmd =~ m/^info$/i);
+    &cMESSAGEFORMAT, exit	if ($paramCmd =~ m/^message$/i);
     
     &cREMOTECHAT, exit		if ($paramCmd =~ m/^chat$/i);
 

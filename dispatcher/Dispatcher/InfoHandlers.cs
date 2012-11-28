@@ -89,7 +89,9 @@ namespace Dispatcher.Handlers
             m_dispatcher = dispatcher;
 
             m_dispatcher.RegisterPreOperationHandler(typeof(InfoRequest),InfoRequestHandler);
+            m_dispatcher.RegisterPreOperationHandler(typeof(MessageFormatRequest),MessageFormatRequestHandler);
             m_dispatcher.RegisterMessageType(typeof(InfoResponse));
+            m_dispatcher.RegisterMessageType(typeof(MessageFormatResponse));
         }
 
         /// -----------------------------------------------------------------
@@ -131,6 +133,31 @@ namespace Dispatcher.Handlers
                 msgs.Add(mvp.Key);
 
             return new InfoResponse(m_dispatcher.AsyncBinding,m_dispatcher.SyncBinding,scenes,msgs);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        protected ResponseBase MessageFormatRequestHandler(RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(MessageFormatRequest))
+            {
+                m_log.WarnFormat("[InfoHandler] wrong type");
+                return new ResponseBase(ResponseCode.Failure,"wrong type");
+            }
+            
+            MessageFormatRequest req = (MessageFormatRequest)irequest;
+
+            Type type = null;
+            if (! MessageBase.FindRegisteredTypeByName(req.MessageName, out type))
+            {
+                m_log.WarnFormat("[InfoHandler] unknown type");
+                return new ResponseBase(ResponseCode.Failure,"unknown type");
+            }
+            
+            RequestBase obj = (RequestBase)Activator.CreateInstance(type);
+            return new MessageFormatResponse(obj.SerializeToString());
         }
 #endregion
     }
