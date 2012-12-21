@@ -47,6 +47,9 @@ using Mono.Addins;
 
 using System;
 using System.Text;
+using System.Collections;
+using System.Collections.Generic;
+
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
 
@@ -83,6 +86,9 @@ namespace Dispatcher.Messages
         [JsonProperty]
         public String EmailAddress { get; set; }
 
+        [JsonProperty]
+        public List<String> DomainList { get; set; }
+        
         // -----------------------------------------------------------------
         /// <summary>
         /// 
@@ -96,6 +102,7 @@ namespace Dispatcher.Messages
             FirstName = "";
             LastName = "";
             EmailAddress = "";
+            DomainList = new List<String>();
         }
     }
     

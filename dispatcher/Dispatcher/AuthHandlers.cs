@@ -81,11 +81,36 @@ namespace Dispatcher.Handlers
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
+        public const String MasterDomain = "MASTER";
+        
+        // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        protected class CapabilityInfo
+        {
+            public UUID Capability { get; set; }
+            public UserAccount Account { get; set; }
+            public HashSet<String> DomainList { get; set; }
+
+            public CapabilityInfo(UUID cap, UserAccount acct, HashSet<String> dlist)
+            {
+                Capability = cap;
+                Account = acct;
+                DomainList = dlist;
+            }
+
+            public CapabilityInfo()
+            {
+                Capability = UUID.Random();
+                Account = null;
+                DomainList = new HashSet<String>();
+            }
+        }
+
         private int m_maxLifeSpan = 300;
         private bool m_useAuthentication = true;
         private DispatcherModule m_dispatcher = null;
         private Dictionary<string,Scene> m_sceneCache = new Dictionary<string,Scene>();
-        private ExpiringCache<UUID,UserAccount> m_authCache = new ExpiringCache<UUID,UserAccount>();
+        private ExpiringCache<UUID,CapabilityInfo> m_authCache = new ExpiringCache<UUID,CapabilityInfo>();
 
 #region ControlInterface
         /// -----------------------------------------------------------------
@@ -125,14 +150,46 @@ namespace Dispatcher.Handlers
             if (! m_useAuthentication)
                 return true;
             
-            UserAccount account;
-            if (m_authCache.TryGetValue(irequest._Capability, out account))
+            CapabilityInfo capability;
+            if (m_authCache.TryGetValue(irequest._Capability, out capability))
             {
-                irequest._UserAccount = account;
-                return true;
+                if (capability.DomainList.Contains(irequest._Domain) || capability.DomainList.Contains(MasterDomain))
+                {
+                    irequest._UserAccount = capability.Account;
+                    return true;
+                }
             }
             
             return false;
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public UUID CreateDomainCapability(Scene scene, HashSet<String> dlist, UserAccount acct, int lifespan)
+        {
+            UUID capability = UUID.Random();
+            m_authCache.AddOrUpdate(capability,new CapabilityInfo(capability,acct,dlist),lifespan);
+
+            return capability;
+        }
+
+        public UUID CreateDomainCapability(Scene scene, String domain, UUID userid, int lifespan)
+        {
+            UserAccount acct = scene.UserAccountService.GetUserAccount(scene.RegionInfo.ScopeID,userid);
+            if (acct == null)
+            {
+                m_log.WarnFormat("[AuthHandler] unable to create capability for user {0}",userid);
+                return UUID.Zero;
+            }
+
+            HashSet<String> dlist = new HashSet<String>();
+            dlist.Add(domain);
+
+            lifespan = Math.Min(lifespan,m_maxLifeSpan);
+
+            return CreateDomainCapability(scene,dlist,acct,lifespan);
         }
 
 #endregion
@@ -181,9 +238,13 @@ namespace Dispatcher.Handlers
             if (scene.AuthenticationService.Authenticate(account.PrincipalID,request.HashedPasswd,0) == String.Empty)
                 OperationFailed(String.Format("failed to authenticate user {0}",request.UserID.ToString()));
             
-            UUID capability = request._Capability == UUID.Zero ? UUID.Random() : request._Capability;
+            HashSet<String> dlist = new HashSet<String>(request.DomainList);
+
             int lifespan = Math.Min(request.LifeSpan,m_maxLifeSpan);
-            m_authCache.AddOrUpdate(capability,account,lifespan);
+            
+            // add it to the authentication cache
+            UUID capability = request._Capability == UUID.Zero ? UUID.Random() : request._Capability;
+            m_authCache.AddOrUpdate(capability,new CapabilityInfo(capability,account,dlist),lifespan);
 
             return new AuthResponse(capability,lifespan);
         }

@@ -91,6 +91,8 @@ use JSON;
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64;
 
+my @gDomainList = qw/Dispatcher RemoteControl/;
+
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Dispatcher Fields
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -107,6 +109,7 @@ sub AuthenticateAvatarByUUID
     $params->{'userid'} = $uuid;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
+    $params->{'domainlist'} = \@gDomainList;
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
 }
@@ -125,6 +128,7 @@ sub AuthenticateAvatarByName
     $params->{'lastname'} = $lname;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
+    $params->{'domainlist'} = \@gDomainList;
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
 }
@@ -141,6 +145,7 @@ sub AuthenticateAvatarByEmail
     $params->{'emailaddress'} = $email;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
+    $params->{'domainlist'} = \@gDomainList;
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
 }

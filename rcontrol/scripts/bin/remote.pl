@@ -266,7 +266,9 @@ sub cINFO
     }
 
     &CheckGlobals("info");
-    $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+
+    ## this is a pre auth message, don't need authentication
+    ## $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
 
     my $result = $gRemoteControl->Info();
     if ($result->{_Success} <= 0)
@@ -306,7 +308,9 @@ sub cMESSAGEFORMAT
     }
 
     &CheckGlobals("message");
-    $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+
+    ## this is a pre auth message, don't need authentication
+    ## $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
 
     my $result = $gRemoteControl->MessageFormatRequest($gMessage);
     if ($result->{_Success} <= 0)
