@@ -318,7 +318,8 @@ sub Initialize
     }
 
     $gEndPointURL = $ENV{'OS_REMOTECONTROL_URL'} unless defined $gEndPointURL;
-    $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
+    ## $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
+    $gSceneName = '';
 
     $gRemoteControl = RemoteControlStream->new(URL => $gEndPointURL, SCENE => $gSceneName);
     $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;

@@ -399,7 +399,7 @@ namespace Dispatcher
             // Make sure we get rid of any old versions in either registry
             UnregisterOperationHandler(scene, domain, messagetype);
 
-            string opkey = scene.Name + m_separator + domain + m_separator + messagetype.FullName;
+            string opkey = (scene != null ? scene.Name : "") + m_separator + domain + m_separator + messagetype.FullName;
             m_log.DebugFormat("[Dispatcher] register handler for {0}",opkey);
 
             m_HandlerRegistry.Add(opkey,handler); // Save it in the handler registry
@@ -414,7 +414,7 @@ namespace Dispatcher
         // -----------------------------------------------------------------
         public bool UnregisterOperationHandler(Scene scene, string domain, Type messagetype)
         {
-            string opkey = scene.Name + m_separator + domain + m_separator + messagetype.FullName;
+            string opkey = (scene != null ? scene.Name : "") + m_separator + domain + m_separator + messagetype.FullName;
 
             if (m_HandlerRegistry.ContainsKey(opkey))
             {
