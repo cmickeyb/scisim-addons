@@ -88,6 +88,8 @@ use Term::ReadKey;
 use RemoteControl;
 use Helper::CommandInfo;
 
+my @gDomainList = ();
+
 my $gAvatarEmail;
 my $gAvatarName;
 my $gAvatarPass;
@@ -99,7 +101,8 @@ my $gUseAsync = 0;
 
 my $gOptions = {
     'async!'		=> \$gUseAsync,
-    'email=s'         => \$gAvatarEmail,
+    'domain=s'		=> \@gDomainList,
+    'email=s'		=> \$gAvatarEmail,
     'avname=s'		=> \$gAvatarName,
     'pass=s' 		=> \$gAvatarPass,
     'synchep=s'		=> \$gSynchEP,
@@ -110,10 +113,11 @@ my $gOptions = {
 my $gCmdinfo = Helper::CommandInfo->new(USAGE => "USAGE: $gCommand <command> <options>");
 
 $gCmdinfo->AddCommand('globals','options common to all commands');
-$gCmdinfo->AddCommandParams('globals','-e|--email',' <string>','email address, must be unique');
-$gCmdinfo->AddCommandParams('globals','-n|--name',' <string>','avatars full name');
-$gCmdinfo->AddCommandParams('globals','-p|--pass',' <string>','avatars password');
-$gCmdinfo->AddCommandParams('globals','-u|--url',' <string>','URL for simulator functions');
+$gCmdinfo->AddCommandParams('globals','--email',' <string>','email address, must be unique');
+$gCmdinfo->AddCommandParams('globals','--avname',' <string>','avatars full name');
+$gCmdinfo->AddCommandParams('globals','--pass',' <string>','avatars password');
+$gCmdinfo->AddCommandParams('globals','--synchep',' <string>','URL for HTTP simulator functions');
+$gCmdinfo->AddCommandParams('globals','--asynchep',' <string>','Endpoint for UDP simulator functions');
 $gCmdinfo->AddCommandParams('globals','-s|--scene',' <string>','name of the scene');
 
 # -----------------------------------------------------------------
@@ -201,6 +205,7 @@ sub CheckGlobals
     $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
 
     $gRemoteControl = RemoteControlStream->new(URL => $gSynchEP, SCENE => $gSceneName, REQUESTTYPE => ($gUseAsync ? 'async' : 'sync'));
+    $gRemoteControl->{DOMAINLIST} = \@gDomainList if @gDomainList;
 }
     
 # -----------------------------------------------------------------
@@ -223,7 +228,7 @@ sub cAUTHENTICATE
     my $result;
     if (defined $gAvatarName)
     {
-    $gAvatarPass = &GetAvatarPassword($gAvatarName);
+        $gAvatarPass = &GetAvatarPassword($gAvatarName);
         $result = $gRemoteControl->AuthenticateAvatarByName($gAvatarName,$gAvatarPass,$gLifeSpan);
     }
     elsif (defined $gAvatarEmail)

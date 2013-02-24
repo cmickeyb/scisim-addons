@@ -91,7 +91,7 @@ use JSON;
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64;
 
-my @gDomainList = qw/Dispatcher RemoteControl/;
+my @gDomainList = qw/Dispatcher RemoteControl RemoteSensor/;
 
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Dispatcher Fields
@@ -109,7 +109,8 @@ sub AuthenticateAvatarByUUID
     $params->{'userid'} = $uuid;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
-    $params->{'domainlist'} = \@gDomainList;
+    ## $params->{'domainlist'} = \@gDomainList;
+    $params->{'domainlist'} = $self->{DOMAINLIST};
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
 }
@@ -128,7 +129,8 @@ sub AuthenticateAvatarByName
     $params->{'lastname'} = $lname;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
-    $params->{'domainlist'} = \@gDomainList;
+    ## $params->{'domainlist'} = \@gDomainList;
+    $params->{'domainlist'} = $self->{DOMAINLIST};
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
 }
@@ -145,7 +147,8 @@ sub AuthenticateAvatarByEmail
     $params->{'emailaddress'} = $email;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
-    $params->{'domainlist'} = \@gDomainList;
+    ## $params->{'domainlist'} = \@gDomainList;
+    $params->{'domainlist'} = $self->{DOMAINLIST};
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
 }
@@ -527,10 +530,10 @@ sub UnregisterTouchCallback
 sub SensorDataRequest
 {
     my $self = shift;
-    my ($request, $sensor, $values) = @_;
+    my ($family, $sensor, $values) = @_;
 
     my $params = {};
-    $params->{'RequestID'} = $request;
+    $params->{'SensorFamily'} = $family;
     $params->{'SensorID'} = $sensor;
     $params->{'SensorData'} = $values;
 
@@ -553,7 +556,7 @@ sub new
     bless $self, $class;
 
     # Copy the parameters into the object
-    my %gAutoFields = ( REQUESTTYPE => 'sync', CAPABILITY => undef, SCENE => undef );
+    my %gAutoFields = ( REQUESTTYPE => 'sync', CAPABILITY => undef, SCENE => undef, DOMAINLIST => \@gDomainList );
     $self->{_permitted} = \%gAutoFields;
 
     # Set the initial values for all the parameters
