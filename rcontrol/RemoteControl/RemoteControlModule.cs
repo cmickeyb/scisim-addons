@@ -192,7 +192,7 @@ namespace RemoteControl
                 m_handlers.Add(new EventHandlers(m_scene,m_dispatcher,m_domain));
                 m_handlers.Add(new ObjectPartHandlers(m_scene,m_dispatcher,m_domain));
                 m_handlers.Add(new AvatarHandlers(m_scene,m_dispatcher,m_domain));
-                // m_handlers.Add(new AssetHandlers(m_scene,m_dispatcher,m_domain));
+                m_handlers.Add(new AssetHandlers(m_scene,m_dispatcher,m_domain));
                 
                 foreach (BaseHandler handler in m_handlers)
                     handler.RegisterHandlers();

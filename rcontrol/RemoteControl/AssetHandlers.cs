@@ -75,7 +75,7 @@ namespace RemoteControl.Handlers
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        IAssetService m_cache;
+        IImprovedAssetCache m_cache = null;
         
 #region ControlInterface
         /// -----------------------------------------------------------------
@@ -84,7 +84,9 @@ namespace RemoteControl.Handlers
         /// -----------------------------------------------------------------
         public AssetHandlers(Scene scene, IDispatcherModule dispatcher, string domain) : base(scene,dispatcher,domain)
         {
-            m_cache = 
+            IImprovedAssetCache cache = scene.RequestModuleInterface<IImprovedAssetCache>();
+            if (cache is ISharedRegionModule)
+                m_cache = cache;
         }
 
         /// -----------------------------------------------------------------
@@ -95,6 +97,7 @@ namespace RemoteControl.Handlers
         /// -----------------------------------------------------------------
         public override void UnregisterHandlers()
         {
+            m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(TestAssetRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetAssetRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(AddAssetRequest));
         }
@@ -109,9 +112,11 @@ namespace RemoteControl.Handlers
         {
             //m_log.WarnFormat("[TerrainHandlers] register methods");
 
+            m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(TestAssetRequest),TestAssetHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetAssetRequest),GetAssetHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(AddAssetRequest),AddAssetHandler);
 
+            m_dispatcher.RegisterMessageType(typeof(TestAssetResponse));
             m_dispatcher.RegisterMessageType(typeof(GetAssetResponse));
             m_dispatcher.RegisterMessageType(typeof(AddAssetResponse));
         }
@@ -122,14 +127,37 @@ namespace RemoteControl.Handlers
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
+        public ResponseBase TestAssetHandler(RequestBase irequest)
+        {
+            if (m_cache == null)
+                return OperationFailed("No asset cache");
+
+            if (irequest.GetType() != typeof(TestAssetRequest))
+                return OperationFailed("wrong type");
+
+            TestAssetRequest request = (TestAssetRequest)irequest;
+            AssetBase asset = m_cache.Get(request.AssetID.ToString());
+            return new TestAssetResponse(asset != null ? true : false);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
         public ResponseBase GetAssetHandler(RequestBase irequest)
         {
+            if (m_cache == null)
+                return OperationFailed("No asset cache");
+
             if (irequest.GetType() != typeof(GetAssetRequest))
                 return OperationFailed("wrong type");
 
             GetAssetRequest request = (GetAssetRequest)irequest;
-
-            return new AssetResponse();
+            AssetBase asset = m_cache.Get(request.AssetID.ToString());
+            if (asset == null)
+                return OperationFailed("no such asset");
+            
+            return new GetAssetResponse(asset);
         }
         
         /// -----------------------------------------------------------------
@@ -138,16 +166,34 @@ namespace RemoteControl.Handlers
         // -----------------------------------------------------------------
         public ResponseBase AddAssetHandler(RequestBase irequest)
         {
+            if (m_cache == null)
+                return OperationFailed("No asset cache");
+
             if (irequest.GetType() != typeof(AddAssetRequest))
                 return OperationFailed("wrong type");
 
-            AddAssetRequest request = (SetAssetRequest)irequest;
+            AddAssetRequest request = (AddAssetRequest)irequest;
 
-            UUID id = new UUID(request.AssetID == UUID.Zero ? UUID.Random() : AssetID);
-            sbyte type = (sbyte)request.ContentType;
+            UUID id = request.AssetID;
+            if ((id == UUID.Zero) || (m_cache.Get(id.ToString()) == null))
+            {
+                if (id == UUID.Zero)
+                    id = UUID.Random();
             
-            AssetBase asset = new AssetBase(id, request.Name, type, request.Creator)
+                AssetBase asset = new AssetBase();
+                asset.FullID = id;
+                asset.Data = request.SerializedAsset;
+                asset.Name = request.Name;
+                asset.Metadata.ContentType = request.ContentType;
+                asset.CreatorID = request.CreatorID;
 
+                asset.Local = true;
+                asset.Temporary = false;
+                
+                m_cache.Cache(asset);
+            }
+            
+            
             return new AddAssetResponse(id);
         }
 

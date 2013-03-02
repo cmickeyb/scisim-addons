@@ -64,6 +64,31 @@ using Newtonsoft.Json.Linq;
 namespace RemoteControl.Messages
 {
     [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class TestAssetRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public UUID AssetID  { get; set; }
+        
+        public TestAssetRequest()
+        {
+            AssetID = UUID.Zero;
+        }
+    }
+
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class TestAssetResponse : Dispatcher.Messages.ResponseBase
+    {
+        [JsonProperty]
+        public bool Exists  { get; set; }
+        
+        public TestAssetResponse(bool exists) : base(ResponseCode.Success,"")
+        {
+            Exists = exists;
+        }
+    }
+
+
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
     public class GetAssetRequest : Dispatcher.Messages.RequestBase
     {
         [JsonProperty]
@@ -79,23 +104,31 @@ namespace RemoteControl.Messages
     public class GetAssetResponse : Dispatcher.Messages.ResponseBase
     {
         [JsonProperty]
+        public UUID AssetID  { get; set; }
+
+        [JsonProperty]
         public byte[] SerializedAsset  { get; set; }
 
         [JsonProperty]
-        public int ContentType { get; set; }
-        
-        [JsonProperty]
-        public int ContentLength { get; set; }
-        
-        [JsonProperty]
-        public UUID CreatorID { get; set; }
+        public String Name { get; set; }
 
         [JsonProperty]
-        public String CreationDate { get; set; }
+        public String Description { get; set; }
 
-        public GetAssetResponse(byte[] asset) : base(ResponseCode.Success,"")
+        [JsonProperty]
+        public String ContentType { get; set; }
+        
+        [JsonProperty]
+        public String CreatorID { get; set; }
+
+        public GetAssetResponse(AssetBase asset) : base(ResponseCode.Success,"")
         {
-            SerializedAsset = asset;
+            AssetID = asset.FullID;
+            SerializedAsset = asset.Data;
+            Name = asset.Name;
+            Description = asset.Description;
+            ContentType = asset.Metadata.ContentType;
+            CreatorID = asset.CreatorID;
         }
     }
 
@@ -109,20 +142,25 @@ namespace RemoteControl.Messages
         public byte[] SerializedAsset  { get; set; }
 
         [JsonProperty]
-        public int ContentType { get; set; }
+        public String Name { get; set; }
+
+        [JsonProperty]
+        public String Description { get; set; }
+
+        [JsonProperty]
+        public String ContentType { get; set; }
         
         [JsonProperty]
-        public int ContentLength { get; set; }
-        
-        [JsonProperty]
-        public String Creator { get; set; }
+        public String CreatorID { get; set; }
 
         public AddAssetRequest()
         {
-            SerializedAsset = "";
-            ContentType = 0;
-            ContentLength = 0;
-            CreatorID = UUID.Zero.ToString();
+            AssetID = UUID.Zero;
+            SerializedAsset = null;
+            Name = "";
+            Description = "";
+            ContentType = "";
+            CreatorID = "";
         }
     }
 

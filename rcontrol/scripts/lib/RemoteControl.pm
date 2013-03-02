@@ -524,6 +524,58 @@ sub UnregisterTouchCallback
     return $self->_PostRequest('RemoteControl','RemoteControl.Messages.UnregisterTouchCallbackRequest',$params);
 }
 
+
+
+# -----------------------------------------------------------------
+# NAME: TestAsset
+# -----------------------------------------------------------------
+sub TestAsset
+{
+    my $self = shift;
+    my ($asset) = @_;
+
+    my $params = {};
+    $params->{'AssetID'} = $asset;
+
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.TestAssetRequest',$params);
+}
+
+# -----------------------------------------------------------------
+# NAME: GetAsset
+# -----------------------------------------------------------------
+sub GetAsset
+{
+    my $self = shift;
+    my ($asset) = @_;
+
+    my $params = {};
+    $params->{'AssetID'} = $asset;
+
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.GetAssetRequest',$params);
+}
+
+# -----------------------------------------------------------------
+# NAME: AddAsset
+# -----------------------------------------------------------------
+sub AddAsset
+{
+    my $self = shift;
+    my ($asset, $data, $name, $desc, $type, $creator) = @_;
+
+    my $params = {};
+    $params->{'AssetID'} = $asset;
+    $params->{'SerializedAsset'} = $data;
+    $params->{'Name'} = $name;
+    $params->{'Description'} = $desc;
+    $params->{'ContentType'} = $type;
+    $params->{'CreatorID'} = $creator;
+
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.AddAsset',$params);
+}
+
+
+
+
 # -----------------------------------------------------------------
 # NAME: SensorDataRequest
 # -----------------------------------------------------------------
