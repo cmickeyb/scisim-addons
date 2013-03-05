@@ -180,12 +180,7 @@ namespace RemoteControl.Handlers
                 if (id == UUID.Zero)
                     id = UUID.Random();
             
-                AssetBase asset = new AssetBase();
-                asset.FullID = id;
-                asset.Data = request.SerializedAsset;
-                asset.Name = request.Name;
-                asset.Metadata.ContentType = request.ContentType;
-                asset.CreatorID = request.CreatorID;
+                AssetBase asset = (AssetBase)request;
 
                 asset.Local = true;
                 asset.Temporary = false;

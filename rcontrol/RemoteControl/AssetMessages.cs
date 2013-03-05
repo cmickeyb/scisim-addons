@@ -107,7 +107,7 @@ namespace RemoteControl.Messages
         public UUID AssetID  { get; set; }
 
         [JsonProperty]
-        public byte[] SerializedAsset  { get; set; }
+        public String SerializedAsset  { get; set; }
 
         [JsonProperty]
         public String Name { get; set; }
@@ -124,7 +124,7 @@ namespace RemoteControl.Messages
         public GetAssetResponse(AssetBase asset) : base(ResponseCode.Success,"")
         {
             AssetID = asset.FullID;
-            SerializedAsset = asset.Data;
+            SerializedAsset = System.Convert.ToBase64String(asset.Data);
             Name = asset.Name;
             Description = asset.Description;
             ContentType = asset.Metadata.ContentType;
@@ -139,7 +139,7 @@ namespace RemoteControl.Messages
         public UUID AssetID  { get; set; }
         
         [JsonProperty]
-        public byte[] SerializedAsset  { get; set; }
+        public String SerializedAsset  { get; set; }
 
         [JsonProperty]
         public String Name { get; set; }
@@ -153,10 +153,24 @@ namespace RemoteControl.Messages
         [JsonProperty]
         public String CreatorID { get; set; }
 
+        public static implicit operator AssetBase(AddAssetRequest req)
+        {
+            AssetBase asset = new AssetBase();
+
+            asset.FullID = req.AssetID;
+            asset.Data = System.Convert.FromBase64String(req.SerializedAsset);
+            asset.Name = req.Name;
+            asset.Description = req.Description;
+            asset.Metadata.ContentType = req.ContentType;
+            asset.CreatorID = req.CreatorID;
+            
+            return asset;
+        }
+        
         public AddAssetRequest()
         {
             AssetID = UUID.Zero;
-            SerializedAsset = null;
+            SerializedAsset = "";
             Name = "";
             Description = "";
             ContentType = "";
