@@ -396,26 +396,48 @@ namespace Dispatcher
         // -----------------------------------------------------------------
         public bool RegisterOperationHandler(Scene scene, string domain, Type messagetype, OperationHandler handler)
         {
-            // Make sure we get rid of any old versions in either registry
-            UnregisterOperationHandler(scene, domain, messagetype);
+            string opkey = scene.Name + m_separator + domain + m_separator + messagetype.FullName;
+            return DoRegisterOperationHandler(opkey,messagetype,handler);
+        }
 
-            string opkey = (scene != null ? scene.Name : "") + m_separator + domain + m_separator + messagetype.FullName;
+        public bool RegisterOperationHandler(string domain, Type messagetype, OperationHandler handler)
+        {
+            string opkey = domain + m_separator + messagetype.FullName;
+            return DoRegisterOperationHandler(opkey,messagetype,handler);
+        }
+
+        private bool DoRegisterOperationHandler(string opkey, Type messagetype, OperationHandler handler)
+        {
             m_log.DebugFormat("[Dispatcher] register handler for {0}",opkey);
+
+            // Make sure we get rid of any old versions in either registry
+            DoUnregisterOperationHandler(opkey, messagetype);
 
             m_HandlerRegistry.Add(opkey,handler); // Save it in the handler registry
             RegisterMessageType(messagetype); // And save it in the type registry
 
             return true;
         }
-
+        
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
         public bool UnregisterOperationHandler(Scene scene, string domain, Type messagetype)
         {
-            string opkey = (scene != null ? scene.Name : "") + m_separator + domain + m_separator + messagetype.FullName;
+            string opkey = scene.Name + m_separator + domain + m_separator + messagetype.FullName;
+            return DoUnregisterOperationHandler(opkey,messagetype);
+        }
 
+        public bool UnregisterOperationHandler(string domain, Type messagetype)
+        {
+            string opkey = domain + m_separator + messagetype.FullName;
+            return DoUnregisterOperationHandler(opkey,messagetype);
+        }
+
+
+        private bool DoUnregisterOperationHandler(string opkey, Type messagetype)
+        {
             if (m_HandlerRegistry.ContainsKey(opkey))
             {
                 m_log.DebugFormat("[Dispatcher] unregister handler for {0}",opkey);
@@ -493,6 +515,30 @@ namespace Dispatcher
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
+        private bool FindHandler(RequestBase req, out OperationHandler handler)
+        {
+            handler = null;
+
+            string opkey = req._Domain + m_separator + req.GetType().FullName;
+            
+            // First look for a scene-specific handler
+            if (! String.IsNullOrEmpty(req._Scene))
+            {
+                if (m_HandlerRegistry.TryGetValue(req._Scene + m_separator + opkey, out handler))
+                    return true;
+            }
+            
+            // Look for a scene-independent handler
+            if (m_HandlerRegistry.TryGetValue(opkey, out handler))
+                return true;
+                
+            return false;
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        /// -----------------------------------------------------------------
         private void ProcessRequestQueue()
         {
             while (true)
@@ -510,8 +556,7 @@ namespace Dispatcher
                 }
 
                 OperationHandler handler;
-                string opkey = req._Scene + m_separator + req._Domain + m_separator + req.GetType().FullName;
-                if (m_HandlerRegistry.TryGetValue(opkey, out handler))
+                if (FindHandler(req, out handler))
                     handler(req);
             }
         }
@@ -534,9 +579,8 @@ namespace Dispatcher
                 return OperationFailed("Unauthorized invocation");
 
             // Find the regular handler
-            string opkey = req._Scene + m_separator + req._Domain + m_separator + req.GetType().FullName;
-            if (! m_HandlerRegistry.TryGetValue(opkey, out handler))
-                return OperationFailed(String.Format("Unknown message type; {0}",opkey));
+            if (! FindHandler(req,out handler))
+                return OperationFailed(String.Format("Unknown message type; {0}",req.GetType().FullName));
 
             if (req._AsyncRequest)
             {

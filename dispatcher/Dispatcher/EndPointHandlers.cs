@@ -96,6 +96,9 @@ namespace Dispatcher.Handlers
         {
             m_dispatcher = dispatcher;
 
+            m_dispatcher.RegisterOperationHandler(m_dispatcher.Domain,typeof(CreateEndPointRequest),CreateEndPointRequestHandler);
+            m_dispatcher.RegisterOperationHandler(m_dispatcher.Domain,typeof(RenewEndPointRequest),RenewEndPointRequestHandler);
+            m_dispatcher.RegisterOperationHandler(m_dispatcher.Domain,typeof(CloseEndPointRequest),CloseEndPointRequestHandler);
             m_dispatcher.RegisterMessageType(typeof(CreateEndPointResponse));
         }
 
@@ -106,18 +109,11 @@ namespace Dispatcher.Handlers
         public void AddScene(Scene scene)
         {
             m_sceneCache.Add(scene.Name,scene);
-
-            m_dispatcher.RegisterOperationHandler(scene,m_dispatcher.Domain,typeof(CreateEndPointRequest),CreateEndPointRequestHandler);
-            m_dispatcher.RegisterOperationHandler(scene,m_dispatcher.Domain,typeof(RenewEndPointRequest),RenewEndPointRequestHandler);
-            m_dispatcher.RegisterOperationHandler(scene,m_dispatcher.Domain,typeof(CloseEndPointRequest),CloseEndPointRequestHandler);
         }
         
         public void RemoveScene(Scene scene)
         {
             m_sceneCache.Remove(scene.Name);
-
-            m_dispatcher.UnregisterOperationHandler(scene,m_dispatcher.Domain,typeof(CreateEndPointRequest));
-            m_dispatcher.UnregisterOperationHandler(scene,m_dispatcher.Domain,typeof(RenewEndPointRequest));
         }
 
 #endregion
