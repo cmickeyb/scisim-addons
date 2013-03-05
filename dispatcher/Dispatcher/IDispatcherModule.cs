@@ -63,6 +63,7 @@ namespace Dispatcher
 
     public interface IDispatcherModule
     {
+        bool RegisterOperationHandler(string domain, Type messagetype, OperationHandler handler);
         bool RegisterOperationHandler(Scene scene, string domain, Type messagetype, OperationHandler handler);
         bool UnregisterOperationHandler(Scene scene, string domain, Type messagetype);
 

@@ -301,7 +301,7 @@ sub cINFO
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
 $gCmdinfo->AddCommand('message','get an example of a message from the server');
-
+$gCmdinfo->AddCommandParams('message','-m|--message',' <string>','message type without domain or scene');
 sub cMESSAGEFORMAT
 {
     my $gMessage;
@@ -309,9 +309,10 @@ sub cMESSAGEFORMAT
 
     if (! GetOptions(%{$gOptions}))
     {
-	$gCmdinfo->DumpCommands('info',"Unknown option");
+	$gCmdinfo->DumpCommands('message',"Unknown option");
     }
 
+    $gCmdinfo->DumpCommands('message','Missing message type') unless defined $gMessage;
     &CheckGlobals("message");
 
     ## this is a pre auth message, don't need authentication
