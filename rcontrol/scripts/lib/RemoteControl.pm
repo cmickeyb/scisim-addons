@@ -770,12 +770,11 @@ sub _PostRequest()
     my ($params) = @_;
 
     croak 'Asynchronous enpoint undefined' unless defined $self->{ENDPOINT};
-    croak 'Scene undefined' unless defined $self->{SCENE};
 
     # Create a request
     $params->{'$type'} = $operation;
     $params->{'_capability'} = $self->{CAPABILITY} if defined $self->{CAPABILITY};
-    $params->{'_scene'} = $self->{SCENE};
+    $params->{'_scene'} = $self->{SCENE} if defined $self->{SCENE};
     $params->{'_domain'} = $domain;
     $params->{'_asyncrequest'} = 1;
 

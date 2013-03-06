@@ -109,6 +109,7 @@ namespace Dispatcher.Handlers
         private int m_maxLifeSpan = 300;
         private bool m_useAuthentication = true;
         private DispatcherModule m_dispatcher = null;
+        private List<Scene> m_sceneList = new List<Scene>();
         private Dictionary<string,Scene> m_sceneCache = new Dictionary<string,Scene>();
         private ExpiringCache<UUID,CapabilityInfo> m_authCache = new ExpiringCache<UUID,CapabilityInfo>();
 
@@ -134,11 +135,13 @@ namespace Dispatcher.Handlers
         public void AddScene(Scene scene)
         {
             m_sceneCache.Add(scene.Name,scene);
+            m_sceneList = new List<Scene>(m_sceneCache.Values);
         }
         
         public void RemoveScene(Scene scene)
         {
             m_sceneCache.Remove(scene.Name);
+            m_sceneList = new List<Scene>(m_sceneCache.Values);
         }
         
         /// -----------------------------------------------------------------
@@ -218,8 +221,14 @@ namespace Dispatcher.Handlers
             AuthRequest request = (AuthRequest)irequest;
 
             // Get a handle to the scene for the request to be used later
+            
             Scene scene;
-            if (! m_sceneCache.TryGetValue(request._Scene, out scene))
+            
+            // if no scene is specified, then we'll just use a random one
+            // in theory no scene needs to be set unless the services in each one are different
+            if (String.IsNullOrEmpty(request._Scene))
+                scene = m_sceneList[0];
+            else if (! m_sceneCache.TryGetValue(request._Scene, out scene))
                 return OperationFailed("no scene specified");
 
             // Grab the account information and cache it for later use
