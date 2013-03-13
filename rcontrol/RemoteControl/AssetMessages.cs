@@ -48,6 +48,7 @@ using Mono.Addins;
 
 using System;
 using System.Text;
+using System.Collections.Generic;
 
 using log4net;
 using OpenMetaverse;
@@ -63,6 +64,9 @@ using Newtonsoft.Json.Linq;
 
 namespace RemoteControl.Messages
 {
+    /// <summary>
+    ///    
+    /// </summary>
     [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
     public class TestAssetRequest : Dispatcher.Messages.RequestBase
     {
@@ -75,6 +79,9 @@ namespace RemoteControl.Messages
         }
     }
 
+    /// <summary>
+    ///    
+    /// </summary>
     [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
     public class TestAssetResponse : Dispatcher.Messages.ResponseBase
     {
@@ -87,21 +94,11 @@ namespace RemoteControl.Messages
         }
     }
 
-
+    /// <summary>
+    ///    
+    /// </summary>
     [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
-    public class GetAssetRequest : Dispatcher.Messages.RequestBase
-    {
-        [JsonProperty]
-        public UUID AssetID  { get; set; }
-        
-        public GetAssetRequest()
-        {
-            AssetID = UUID.Zero;
-        }
-    }
-
-    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
-    public class GetAssetResponse : Dispatcher.Messages.ResponseBase
+    public class AssetData
     {
         [JsonProperty]
         public UUID AssetID  { get; set; }
@@ -121,53 +118,7 @@ namespace RemoteControl.Messages
         [JsonProperty]
         public String CreatorID { get; set; }
 
-        public GetAssetResponse(AssetBase asset) : base(ResponseCode.Success,"")
-        {
-            AssetID = asset.FullID;
-            SerializedAsset = System.Convert.ToBase64String(asset.Data);
-            Name = asset.Name;
-            Description = asset.Description;
-            ContentType = asset.Metadata.ContentType;
-            CreatorID = asset.CreatorID;
-        }
-    }
-
-    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
-    public class AddAssetRequest : Dispatcher.Messages.RequestBase
-    {
-        [JsonProperty]
-        public UUID AssetID  { get; set; }
-        
-        [JsonProperty]
-        public String SerializedAsset  { get; set; }
-
-        [JsonProperty]
-        public String Name { get; set; }
-
-        [JsonProperty]
-        public String Description { get; set; }
-
-        [JsonProperty]
-        public String ContentType { get; set; }
-        
-        [JsonProperty]
-        public String CreatorID { get; set; }
-
-        public static implicit operator AssetBase(AddAssetRequest req)
-        {
-            AssetBase asset = new AssetBase();
-
-            asset.FullID = req.AssetID;
-            asset.Data = System.Convert.FromBase64String(req.SerializedAsset);
-            asset.Name = req.Name;
-            asset.Description = req.Description;
-            asset.Metadata.ContentType = req.ContentType;
-            asset.CreatorID = req.CreatorID;
-            
-            return asset;
-        }
-        
-        public AddAssetRequest()
+        public AssetData()
         {
             AssetID = UUID.Zero;
             SerializedAsset = "";
@@ -178,6 +129,90 @@ namespace RemoteControl.Messages
         }
     }
 
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetAssetRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public UUID AssetID { get; set; }
+        
+        public GetAssetRequest()
+        {
+            AssetID = UUID.Zero;
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetAssetFromObjectRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public UUID ObjectID  { get; set; }
+
+        public GetAssetFromObjectRequest()
+        {
+            ObjectID = UUID.Zero;
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetAssetResponse : Dispatcher.Messages.ResponseBase
+    {
+        [JsonProperty]
+        public AssetData Asset { get; set; }
+
+        public GetAssetResponse(AssetBase asset) : base(ResponseCode.Success,"")
+        {
+            Asset = new AssetData();
+            
+            Asset.AssetID = asset.FullID;
+            Asset.SerializedAsset = System.Convert.ToBase64String(asset.Data);
+            Asset.Name = asset.Name;
+            Asset.Description = asset.Description;
+            Asset.ContentType = asset.Metadata.ContentType;
+            Asset.CreatorID = asset.CreatorID;
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class AddAssetRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public AssetData Asset { get; set; }
+
+        public static implicit operator AssetBase(AddAssetRequest req)
+        {
+            AssetBase asset = new AssetBase();
+
+            asset.FullID = req.Asset.AssetID;
+            asset.Data = System.Convert.FromBase64String(req.Asset.SerializedAsset);
+            asset.Name = req.Asset.Name;
+            asset.Description = req.Asset.Description;
+            asset.Metadata.ContentType = req.Asset.ContentType;
+            asset.CreatorID = req.Asset.CreatorID;
+            
+            return asset;
+        }
+        
+        public AddAssetRequest()
+        {
+            Asset = new AssetData();
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
     [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
     public class AddAssetResponse : Dispatcher.Messages.ResponseBase
     {
@@ -189,6 +224,34 @@ namespace RemoteControl.Messages
             AssetID = assetid;
         }
     }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetDependentAssetsRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public UUID AssetID  { get; set; }
+        
+        public GetDependentAssetsRequest()
+        {
+            AssetID = UUID.Zero;
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetDependentAssetsResponse : Dispatcher.Messages.ResponseBase
+    {
+        [JsonProperty]
+        public List<UUID> DependentAssets  { get; set; }
+        
+        public GetDependentAssetsResponse(List<UUID> assets) : base(ResponseCode.Success,"")
+        {
+            DependentAssets = assets;
+        }
+    }
 }
-
-
