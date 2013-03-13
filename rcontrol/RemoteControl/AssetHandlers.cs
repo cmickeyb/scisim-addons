@@ -99,7 +99,9 @@ namespace RemoteControl.Handlers
         {
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(TestAssetRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetAssetRequest));
+            m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetAssetFromObjectRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(AddAssetRequest));
+            m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetDependentAssetsRequest));
         }
 
         // -----------------------------------------------------------------
@@ -110,15 +112,16 @@ namespace RemoteControl.Handlers
         // -----------------------------------------------------------------
         public override void RegisterHandlers()
         {
-            //m_log.WarnFormat("[TerrainHandlers] register methods");
-
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(TestAssetRequest),TestAssetHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetAssetRequest),GetAssetHandler);
+            m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetAssetFromObjectRequest),GetAssetFromObjectHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(AddAssetRequest),AddAssetHandler);
+            m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetDependentAssetsRequest),GetDependentAssetsHandler);
 
             m_dispatcher.RegisterMessageType(typeof(TestAssetResponse));
             m_dispatcher.RegisterMessageType(typeof(GetAssetResponse));
             m_dispatcher.RegisterMessageType(typeof(AddAssetResponse));
+            m_dispatcher.RegisterMessageType(typeof(GetDependentAssetsResponse));
         }
 #endregion
 
@@ -164,6 +167,42 @@ namespace RemoteControl.Handlers
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
+        /// TODO: should probably move this to the object messages domain, it is the
+        /// only message that requires access to the scene
+        public ResponseBase GetAssetFromObjectHandler(RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(GetAssetFromObjectRequest))
+                return OperationFailed("wrong type");
+
+            GetAssetFromObjectRequest request = (GetAssetFromObjectRequest)irequest;
+
+            SceneObjectGroup sog = m_scene.GetSceneObjectGroup(request.ObjectID);
+            if (sog == null)
+                return OperationFailed("no such object");
+
+            string itemXml;
+            itemXml = SceneObjectSerializer.ToOriginalXmlFormat(sog,false);
+
+            AssetBase asset = new AssetBase();
+
+            asset.FullID = UUID.Random();
+            asset.Data = Utils.StringToBytes(itemXml);
+            asset.Name = sog.GetPartName(sog.RootPart.LocalId);
+            asset.Description = sog.GetPartDescription(sog.RootPart.LocalId);
+            asset.Type = (sbyte)AssetType.Object;
+            asset.CreatorID = sog.OwnerID.ToString();
+            asset.Local = true;
+            asset.Temporary = false;
+
+            m_cache.Cache(asset);
+            
+            return new GetAssetResponse(asset);
+        }
+        
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
         public ResponseBase AddAssetHandler(RequestBase irequest)
         {
             if (m_cache == null)
@@ -191,6 +230,29 @@ namespace RemoteControl.Handlers
             
             return new AddAssetResponse(id);
         }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public ResponseBase GetDependentAssetsHandler(RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(GetDependentAssetsRequest))
+                return OperationFailed("wrong type");
+
+            GetDependentAssetsRequest request = (GetDependentAssetsRequest)irequest;
+            AssetBase asset = m_cache.Get(request.AssetID.ToString());
+            if (asset == null)
+                return OperationFailed("no such asset");
+
+            UuidGatherer gatherer = new UuidGatherer(m_scene.AssetService);
+            Dictionary<UUID,AssetType> assetids = new Dictionary<UUID,AssetType>();
+            gatherer.GatherAssetUuids(request.AssetID, (AssetType)asset.Type, assetids);
+            
+            List<UUID> assets = new List<UUID>(assetids.Keys);
+            return new GetDependentAssetsResponse(assets);
+        }
+        
 
 #endregion
     }
