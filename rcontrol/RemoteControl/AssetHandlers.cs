@@ -174,7 +174,7 @@ namespace RemoteControl.Handlers
 
             AddAssetRequest request = (AddAssetRequest)irequest;
 
-            UUID id = request.AssetID;
+            UUID id = request.Asset.AssetID;
             if ((id == UUID.Zero) || (m_cache.Get(id.ToString()) == null))
             {
                 if (id == UUID.Zero)
