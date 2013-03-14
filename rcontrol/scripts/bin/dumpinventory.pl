@@ -86,25 +86,32 @@ use Digest::MD5 qw(md5_hex);
 use Getopt::Long;
 
 use Simian;
+use RemoteControl;
 use Helper::CommandInfo;
 
 # these describe how the user is identified
 my $gIDValue;
 my $gIDType;
 
+my $gInventoryRoot;
+my $gAssetRoot;
+my $gSceneName;
+my $gEndPointURL;
+
 my $gAvatarName;
 my $gAvatarUUID;
 my $gSimianURL;
 my $gSimian;
 my $gPath = '';
-my $gRoot = '.';
 
 my $gOptions = {
     'i|uuid=s'          => \$gAvatarUUID,
     'n|name=s'		=> \$gAvatarName,
     'p|path=s'		=> \$gPath,
-    'r|root=s'		=> \$gRoot,
-    'u|url=s' 		=> \$gSimianURL
+    'root=s'		=> \$gInventoryRoot,
+    'simian=s' 		=> \$gSimianURL,
+    'dispatch=s'	=> \$gEndPointURL,
+    's|scene=s'		=> \$gSceneName
 };
 
 my $gCmdinfo = Helper::CommandInfo->new(USAGE => "USAGE: $gCommand <command> <options>");
@@ -117,10 +124,10 @@ $gCmdinfo->AddCommandParams('globals','-p|--path',' <string>','inventory path to
 $gCmdinfo->AddCommandParams('globals','-u|--url',' <string>','URL for simian grid functions');
 
 # -----------------------------------------------------------------
-# NAME: CheckGlobals
+# NAME: InitializeSimian
 # DESC: Check to make sure all of the required globals are set
 # -----------------------------------------------------------------
-sub CheckGlobals
+sub InitializeSimian
 {
     my $cmd = shift(@_);
 
@@ -141,6 +148,111 @@ sub CheckGlobals
     $gSimian = Simian->new(URL => $gSimianURL);
 }
     
+# -----------------------------------------------------------------
+# NAME: AuthenticateRequest
+# DESC: Return a valid capability
+# -----------------------------------------------------------------
+sub AuthenticateRequest
+{
+    # Check for a valid capability already stored in the environment
+    if (exists $ENV{'OS_REMOTECONTROL_CAP'})
+    {
+        my ($cap, $exp) = split(':',$ENV{'OS_REMOTECONTROL_CAP'});
+        return $cap if time < $exp;
+
+        die "saved capability has expired; please authenticate\n";
+    }
+
+    die "no capability found; please authenticate\n";
+}
+
+# -----------------------------------------------------------------
+# NAME: Initialize
+# -----------------------------------------------------------------
+sub InitializeDispatcher
+{
+    $gEndPointURL = $ENV{'OS_REMOTECONTROL_URL'} unless defined $gEndPointURL;
+    $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
+    $gInventoryRoot = $ENV{'OS_INVENTORY_ROOT'} unless defined $gInventoryRoot;
+    $gInventoryRoot = $ENV{'HOME'} . '/xfer' unless defined $gInventoryRoot;
+    $gAssetRoot = $gInventoryRoot . "/.assets";
+
+    die "unable to find inventory root directly; $gInventoryRoot\n" unless -d $gInventoryRoot;
+    make_path($gAssetRoot);     # make sure the asset directory exists
+
+    $gRemoteControl = RemoteControlStream->new(URL => $gEndPointURL, SCENE => $gSceneName);
+    $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+}
+
+# -----------------------------------------------------------------
+# NAME: MakeAssetPath
+# -----------------------------------------------------------------
+sub MakeAssetPath
+{
+    my $uuid = shift(@_);
+
+    my $p1 = substr($uuid,0,3);
+    my $p2 = substr($uuid,3,3);
+
+    make_path("$gAssetRoot/$p1/$p2");
+    return "$gAssetRoot/$p1/$p2/$uuid";
+}
+
+# -----------------------------------------------------------------
+# NAME: RequireLocalAsset
+# DESC: Make sure there is a local copy of an asset
+# -----------------------------------------------------------------
+sub RequireLocalAsset
+{
+    my $assetid = shift(@_);
+    my $file = &MakeAssetPath($assetid);
+
+    return if -e $file;
+
+    my $result = $gRemoteControl->GetAsset($assetid);
+    print STDERR "Unable to retrieve asset $assetid; " . $result->{_Message} . "\n", return
+        if $result->{_Success} <= 0;
+
+    my $asset = $result->{'Asset'};
+
+    print STDERR "unable to open asset file $file; $!\n", return unless open($fh,">$file");
+    print $fh encode_json($result->{'Asset'});
+    close $fh;
+}
+
+# -----------------------------------------------------------------
+# NAME: SaveAsset
+# DESC: Save a local copy of an asset
+# -----------------------------------------------------------------
+sub SaveAsset
+{
+    my $asset = shift(@_);
+    my $assetid = $asset->{'AssetID'};
+
+    my $file = &MakeAssetPath($assetid);
+
+    return if -e $file;
+
+    print STDERR "unable to open asset file $file; $!\n", return unless open($fh,">$file");
+    print $fh encode_json($asset);
+    close $fh;
+}
+
+# -----------------------------------------------------------------
+# NAME: GetAssetDependencies
+# DESC: Get the list of assets that are required 
+# -----------------------------------------------------------------
+sub GetAssetDependencies
+{
+    my $asset = shift(@_);
+    
+    my $result = $gRemoteControl->GetDependentAssets($asset);
+    print STDERR "Unable to retrieve dependencies for $asset; " . $result->{_Message} . "\n", return ()
+        if $result->{_Success} <= 0;
+
+    return @{$result->{'DependentAssets'}};
+}
+
 # -----------------------------------------------------------------
 # NAME: FindInventoryNodeByName
 # -----------------------------------------------------------------
@@ -220,12 +332,9 @@ sub CleanPath
 sub ProcessFolder
 {
     my $ipath = shift(@_);
-    my $path = &CleanPath($gRoot . $ipath);
+    my $path = &CleanPath($gInventoryRoot . $ipath);
 
-    unless (make_path($path))
-    {
-        print STDERR "failed to create $path\n";
-    }
+    make_path($path) unless -d $path;
 }
 
 # -----------------------------------------------------------------
@@ -236,47 +345,59 @@ sub ProcessItem
     my $path = shift(@_);
     my $item = shift(@_);
 
+    # ---------- Grab and save the asset ----------
+    my $assetid = $item->{'AssetID'};
+    my $result = $gRemoteControl->GetAsset($assetid);
+    print STDERR "Failed to get asset for $assetid; " . $result->{_Message} . "\n", return
+        if $result->{_Success} <= 0;
+
+    my $asset = $result->{'Asset'};
+    &SaveAsset($asset);
+
+    # ---------- Pull all of the dependent assets ----------
+    my @depends = &GetAssetDependencies($asset->{'AssetID'});
+    foreach my $dasset (@depends)
+    {
+        &RequireLocalAsset($dasset);
+    }
+    
+    # ---------- Save the inventory file ----------
     my $name = &CleanName($item->{'Name'});
 
-    my $pkey;
-    my $props = {};
+    $invitem->{'AssetID'} = $asset->{'AssetID'};
+    $invitem->{'AssetType'} = $asset->{'ContentType'};
+    $invitem->{'Description'} = $item->{'Description'} || $asset->{'Description'};
+    $invitem->{'CreatorID'} = $asset->{'CreatorID'};
+    $invitem->{'AssetDependencies'} = \@depends;
 
-    my $perms = $item->{'ExtraData'}->{'Permissions'};
-    $props->{'Permissions'} = $perms if defined $perms;
+    my $perms = {}; 
+    my $iperms = $item->{'ExtraData'}->{'Permissions'};
+    $perms->{'NextOwnerMask'} = $iperms->{'NextOwnerMask'} || 0;
+    $perms->{'OwnerMask'} = $iperms->{'OwnerMask'} || 0;
+    $perms->{'EveryoneMask'} = $iperms->{'EveryoneMask'} || 0;
+    $perms->{'BaseMask'} = $iperms->{'BaseMask'} || 0;
+    
+    $invitem->{'Permissions'} = $perms;
 
-    foreach $pkey (qw/CreatorID OwnerID AssetID Description/)
-    {
-        $props->{$pkey} = $item->{$pkey};
-    }
-
-    my $file = &CleanPath($gRoot . $path . '/' . $name);
-    if (open(my $fh, "> $file"))
-    { 
-        print $fh to_json($props,{pretty => 1});
-        close $fh;
-    }
-    else
-    {
-        print STDERR "unable to open file $file\n";
-    }
+    my $file = &CleanPath($gInventoryRoot . $path . '/' . $name);
+    open($fh,">$file") || die "unable to open file $file; $!\n";
+    print $fh to_json($invitem,{pretty => 1});
+    close $fh;
 }
 
 
-## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-## Commands
-## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
 # -----------------------------------------------------------------
-# NAME: cDUMPINVENTORY
+# NAME: Main
 # -----------------------------------------------------------------
-sub cDUMPINVENTORY
+sub Main
 {
     if (! GetOptions(%{$gOptions}))
     {
         $gCmdinfo->DumpCommands('dumpinventory','Unknown option');
     }
 
-    &CheckGlobals;
+    &InitializeSimian;
+    &InitializeDispatcher;
 
     my $info = $gSimian->GetUser($gIDValue,$gIDType);
     return unless defined $info;
@@ -319,14 +440,6 @@ sub cDUMPINVENTORY
             }
         }
     }
-}
-
-# -----------------------------------------------------------------
-# NAME: Main
-# -----------------------------------------------------------------
-sub Main
-{
-    &cDUMPINVENTORY;
 }
 
 &Main;

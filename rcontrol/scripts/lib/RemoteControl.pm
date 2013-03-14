@@ -555,26 +555,46 @@ sub GetAsset
 }
 
 # -----------------------------------------------------------------
+# NAME: GetAssetFromObject
+# -----------------------------------------------------------------
+sub GetAssetFromObject
+{
+    my $self = shift;
+    my ($id) = @_;
+
+    my $params = {};
+    $params->{'ObjectID'} = $id;
+
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.GetAssetFromObjectRequest',$params);
+}
+
+# -----------------------------------------------------------------
+# NAME: GetDependentAssets
+# -----------------------------------------------------------------
+sub GetDependentAssets
+{
+    my $self = shift;
+    my ($asset) = @_;
+
+    my $params = {};
+    $params->{'AssetID'} = $asset;
+
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.GetDependentAssetsRequest',$params);
+}
+
+# -----------------------------------------------------------------
 # NAME: AddAsset
 # -----------------------------------------------------------------
 sub AddAsset
 {
     my $self = shift;
-    my ($asset, $data, $name, $desc, $type, $creator) = @_;
+    my ($asset) = @_;
 
     my $params = {};
-    $params->{'AssetID'} = $asset;
-    $params->{'SerializedAsset'} = $data;
-    $params->{'Name'} = $name;
-    $params->{'Description'} = $desc;
-    $params->{'ContentType'} = $type;
-    $params->{'CreatorID'} = $creator;
+    $params->{'Asset'} = $asset;
 
     return $self->_PostRequest('RemoteControl','RemoteControl.Messages.AddAsset',$params);
 }
-
-
-
 
 # -----------------------------------------------------------------
 # NAME: SensorDataRequest
@@ -711,11 +731,11 @@ sub _PostRequest()
         croak "JSON decode of string <" . $result->content . "> failed\n";
     }
 
-    if ($results->{"_Success"} <= 0)
-    {
-        my $msg = $results->{"_Message"} || "unknown error";
-        carp "Operation failed; $msg\n";
-    }
+    # if ($results->{"_Success"} <= 0)
+    # {
+    #     my $msg = $results->{"_Message"} || "unknown error";
+    #     carp "Operation failed; $msg\n";
+    # }
 
     return $results;
 }

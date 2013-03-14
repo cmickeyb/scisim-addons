@@ -81,6 +81,9 @@ use lib "/share/opensim/lib";
 
 my $gCommand = $FindBin::Script;
 
+use File::Basename;
+use File::Path qw/make_path/;
+
 use Carp;
 use JSON;
 
@@ -98,13 +101,13 @@ my $gRemoteControl;
 # -----------------------------------------------------------------
 # Configuration variables
 # -----------------------------------------------------------------
-my $gAssetID;
+my $gInventoryRoot;
+my $gAssetRoot;
 my $gSceneName;
 my $gEndPointURL;
 
-
 my $gOptions = {
-    'a|asset=s'		=> \$gAssetID,
+    'root=s'		=> \$gInventoryRoot,
     's|scene=s'		=> \$gSceneName,
     'u|url=s' 		=> \$gEndPointURL,
 };
@@ -138,47 +141,139 @@ sub Initialize
 {
     $gEndPointURL = $ENV{'OS_REMOTECONTROL_URL'} unless defined $gEndPointURL;
     $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
+    $gInventoryRoot = $ENV{'OS_INVENTORY_ROOT'} unless defined $gInventoryRoot;
+    $gInventoryRoot = $ENV{'HOME'} . '/xfer' unless defined $gInventoryRoot;
+    $gAssetRoot = $gInventoryRoot . "/.assets";
+
+    die "unable to find inventory root directly; $gInventoryRoot\n" unless -d $gInventoryRoot;
+    make_path($gAssetRoot);     # make sure the asset directory exists
 
     $gRemoteControl = RemoteControlStream->new(URL => $gEndPointURL, SCENE => $gSceneName);
     $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
 }
 
 # -----------------------------------------------------------------
-# NAME: TESt
-# DESC: Get an asset
+# NAME: SlurpFile
+# DESC: Read an entire file into a string
 # -----------------------------------------------------------------
-sub TEST
+sub SlurpFile
 {
+    my $file = shift;
 
-    if (! GetOptions(%{$gOptions}))
-    {
-        die "Unknown option\n";
-    }
+    local $/ = undef;
+    open(FILE,"<$file") || die "unable to open $file for reading; $!\n";
+    my $string = <FILE>;
+    close(FILE);
 
-    &Initialize();
-
-    die "Missing required parameter; asset\n" unless defined $gAssetID;
-    
-    my $result = $gRemoteControl->TestAsset($gAssetID);
-    if ($result->{_Success} <= 0)
-    {
-        print STDERR "Operation failed; " . $result->{_Message} . "\n";
-    }
-
-    print "$gAssetID " . ($result->{Exists} ? "does" : "does not") . " exist\n";
-
-    exit($result->{Exists});
+    return $string;
 }
 
 # -----------------------------------------------------------------
-# NAME: GET
-# DESC: Get an asset
+# NAME: MakeAssetPath
 # -----------------------------------------------------------------
-sub GET
+sub MakeAssetPath
 {
-    my $file;
+    my $uuid = shift(@_);
 
-    $gOptions->{'f|file=s'} = \$file;
+    my $p1 = substr($uuid,0,3);
+    my $p2 = substr($uuid,3,3);
+
+    make_path("$gAssetRoot/$p1/$p2");
+    return "$gAssetRoot/$p1/$p2/$uuid";
+}
+
+# -----------------------------------------------------------------
+# NAME: RequireRemoteAsset
+# DESC: Make sure there is a copy of the asset on the server
+# -----------------------------------------------------------------
+sub RequireRemoteAsset
+{
+    my $assetid = shift(@_);
+    my $file = &MakeAssetPath($assetid);
+
+    croak "there is no local copy of the asset $assetid\n" unless -e $file;
+    
+    my $result = $gRemoteControl->TestAsset($assetid);
+    die "TestAsset returned an error; " . $result->{_Message} . "\n"
+        if $result->{_Success} <= 0;
+
+    return if $result->{Exists};
+    
+    my $asset = decode_json(SlurpFile($file));
+    $result = $gRemoteControl->AddAsset($asset);
+    die "AddAsset returned an error; " . $result->{_Message} . "\n"
+        if $result->{_Success} <= 0;
+}
+
+# -----------------------------------------------------------------
+# NAME: RequireLocalAsset
+# DESC: Make sure there is a local copy of an asset
+# -----------------------------------------------------------------
+sub RequireLocalAsset
+{
+    my $assetid = shift(@_);
+    my $file = &MakeAssetPath($assetid);
+
+    return if -e $file;
+
+    my $result = $gRemoteControl->GetAsset($assetid);
+    die "Unable to retrieve asset $assetid; " . $result->{_Message} . "\n"
+        if $result->{_Success} <= 0;
+
+    my $asset = $result->{'Asset'};
+
+    die "unable to open asset file $file; $!\n" unless open($fh,">$file");
+    print $fh encode_json($result->{'Asset'});
+    close $fh;
+}
+
+# -----------------------------------------------------------------
+# NAME: SaveAsset
+# DESC: Save a local copy of an asset
+# -----------------------------------------------------------------
+sub SaveAsset
+{
+    my $asset = shift(@_);
+    my $assetid = $asset->{'AssetID'};
+
+    my $file = &MakeAssetPath($assetid);
+
+    return if -e $file;
+
+    die "unable to open asset file $file; $!\n" unless open($fh,">$file");
+    print $fh encode_json($asset);
+    close $fh;
+}
+
+# -----------------------------------------------------------------
+# NAME: GetAssetDependencies
+# DESC: Get the list of assets that are required 
+# -----------------------------------------------------------------
+sub GetAssetDependencies
+{
+    my $asset = shift(@_);
+    
+    my $result = $gRemoteControl->GetDependentAssets($asset);
+    die "Unable to retrieve dependencies for $asset; " . $result->{_Message} . "\n"
+        if $result->{_Success} <= 0;
+
+    return @{$result->{'DependentAssets'}};
+}
+
+# -----------------------------------------------------------------
+# NAME: cGETOBJECT
+# DESC: create a local inventory entry from an object
+# -----------------------------------------------------------------
+sub cGETOBJECT
+{
+    my $invpath;
+    my $object;
+    my $description;
+
+    $gOptions->{'o|object=s'} = \$object;
+    $gOptions->{'p|path=s'} = \$invpath;
+    $gOptions->{'d|description=s'} = \$description;
+
     if (! GetOptions(%{$gOptions}))
     {
         die "Unknown option\n";
@@ -186,11 +281,98 @@ sub GET
 
     &Initialize();
 
-    die "Missing required parameter; asset\n" unless defined $gAssetID;
+    die "Missing required parameter; object\n" unless defined $object;
+    die "Missing required parameter; path\n" unless defined $invpath;
     
-    my $result = $gRemoteControl->GetAsset($gAssetID);
+    # ---------- Get the asset associated with the object ----------
+    my $result = $gRemoteControl->GetAssetFromObject($object);
+    die "Failed to get asset for the object; " . $result->{_Message} . "\n"
+        if $result->{_Success} <= 0;
 
-    print to_json($result,{pretty => 1});
+    my $asset = $result->{'Asset'};
+    &SaveAsset($asset);
+
+    # ---------- Pull all of the dependent assets ----------
+    my @depends = &GetAssetDependencies($asset->{'AssetID'});
+    foreach my $dasset (@depends)
+    {
+        &RequireLocalAsset($dasset);
+    }
+
+    # ---------- Save the inventory file ----------
+    my $invitem = {};
+    $invitem->{'AssetID'} = $asset->{'AssetID'};
+    $invitem->{'AssetType'} = $asset->{'ContentType'};
+    $invitem->{'Description'} = $description || $asset->{'Description'};
+    $invitem->{'CreatorID'} = $asset->{'CreatorID'};
+    $invitem->{'AssetDependencies'} = \@depends;
+
+    my $perms = {};
+    $perms->{'NextOwnerMask'} = 0;
+    $perms->{'OwnerMask'} = 0;
+    $perms->{'EveryoneMask'} = 0;
+    $perms->{'BaseMask'} = 0;
+
+    $invitem->{'Permissions'} = $perms;
+
+    open($fh,">$gInventoryRoot/$invpath") || croak "unable to open file $invpath; $!\n";
+    print $fh to_json($invitem,{pretty => 1});
+    close $fh;
+}
+
+# -----------------------------------------------------------------
+# NAME: cPUTOBJECT
+# DESC: Rez an object from an inventory entry
+# -----------------------------------------------------------------
+sub cPUTOBJECT
+{
+    my $invpath;
+    my @position;
+    my @velocity;
+    my @rotation;
+    my $startparam;
+
+    $gOptions->{'p|path=s'} = \$invpath;
+    $gOptions->{'l|location=f{3}'} = \@position;
+    $gOptions->{'v|velocity=f{3}'} = \@velocity;
+    $gOptions->{'r|rotation=f{4}'} = \@rotation;
+    $gOptions->{'start=s'} = \$startparam;
+
+    if (! GetOptions(%{$gOptions}))
+    {
+        die "Unknown option\n";
+    }
+
+    &Initialize();
+
+    @position = (128.0, 128.0, 30.0) unless @position;
+    @rotation = (0.0, 0.0, 0.0, 1.0) unless @rotation;
+    @velocity = (0.0, 0.0, 0.0) unless @velocity;
+
+    die "Missing required parameter; path\n" unless defined $invpath;
+    die "No such inventory item; $invpath\n" unless -e "$gInventoryRoot/$invpath";
+
+    my $invitem = from_json(&SlurpFile("$gInventoryRoot/$invpath"));
+    my $type = $invitem->{'AssetType'};
+    die "Item of type $type cannot be created; expecting application/vnd.ll.primitive\n"
+        if $type ne 'application/vnd.ll.primitive';
+
+    my $assetid = $invitem->{'AssetID'};
+    my $description = $invitem->{'Description'};
+    my $name = basename($invpath);
+
+    # ---------- Make sure all the assets exist ----------
+    foreach my $dasset (@{$invitem->{'AssetDependencies'}})
+    {
+        &RequireRemoteAsset($dasset);
+    }
+
+    # ---------- And create the new object ----------
+    my $result = $gRemoteControl->CreateObject($assetid,\@position,\@rotation,\@velocity,$name,$description,$startparam);
+    die "Unable to create the object; " . $result->{_Message} . "\n"
+        if $result->{_Success} <= 0;
+
+    print $result->{ObjectID} . "\n";
 }
 
 # -----------------------------------------------------------------
@@ -200,8 +382,8 @@ sub GET
 sub Main {
     my $cmd = ($#ARGV >= 0) ? shift @ARGV : "HELP";
 
-    &TEST, exit   if ($cmd =~ m/^test$/i);
-    &GET, exit   if ($cmd =~ m/^get$/i);
+    &cGETOBJECT, exit	if ($cmd =~ m/^get$/i);
+    &cPUTOBJECT, exit	if ($cmd =~ m/^put$/i);
 
     &Usage();
 }
