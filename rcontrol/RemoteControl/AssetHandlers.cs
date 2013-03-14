@@ -156,7 +156,9 @@ namespace RemoteControl.Handlers
                 return OperationFailed("wrong type");
 
             GetAssetRequest request = (GetAssetRequest)irequest;
-            AssetBase asset = m_cache.Get(request.AssetID.ToString());
+            AssetBase asset = m_scene.AssetService.Get(request.AssetID.ToString());
+            // AssetBase asset = m_cache.Get(request.AssetID.ToString());
+
             if (asset == null)
                 return OperationFailed("no such asset");
             
