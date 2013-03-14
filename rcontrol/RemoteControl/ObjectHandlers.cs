@@ -341,7 +341,7 @@ namespace RemoteControl.Handlers
             if (sog == null)
                 return OperationFailed("no such object");
 
-            return new GetObjectDataResponse(request.ObjectID,sog.Name,sog.AbsolutePosition,sog.GroupRotation,sog.OwnerID);
+            return new GetObjectDataResponse(sog);
         }
         
         /// -----------------------------------------------------------------

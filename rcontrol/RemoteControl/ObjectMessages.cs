@@ -55,6 +55,7 @@ using OpenMetaverse;
 using OpenMetaverse.StructuredData;
 
 using OpenSim.Framework;
+using OpenSim.Region.Framework.Scenes;
 
 using Dispatcher;
 using Dispatcher.Messages;
@@ -213,13 +214,13 @@ namespace RemoteControl.Messages
         [JsonProperty]
         public UUID OwnerID { get; set; }
 
-        public GetObjectDataResponse(UUID oid, string name, Vector3 pos, Quaternion rot, UUID owner) : base(ResponseCode.Success,"")
+        public GetObjectDataResponse(SceneObjectGroup sog) : base(ResponseCode.Success,"")
         {
-            ObjectID = oid;
-            Name = name;
-            Position = pos;
-            Rotation = rot;
-            OwnerID = owner;
+            ObjectID = sog.UUID;
+            Name = sog.Name;
+            Position = sog.AbsolutePosition;
+            Rotation = sog.GroupRotation;
+            OwnerID = sog.OwnerID;
         }
     }
 
