@@ -738,7 +738,6 @@ sub Main
 
     &cFINDOBJECTS, exit		if ($paramCmd =~ m/^find$/i);
     &cCREATEFROMASSET, exit	if ($paramCmd =~ m/^create$/i);
-    &cCREATEFROMASSET, exit	if ($paramCmd =~ m/^create$/i);
     &cDELETEOBJECT, exit	if ($paramCmd =~ m/^delete$/i);
     &cDUMPOBJECT, exit		if ($paramCmd =~ m/^dump$/i);
     &cSETOBJECTPOSITION, exit	if ($paramCmd =~ m/^setpos$/i);
