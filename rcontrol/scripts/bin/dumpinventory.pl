@@ -185,6 +185,18 @@ sub InitializeDispatcher
 }
 
 # -----------------------------------------------------------------
+# NAME: OperationFailed
+# -----------------------------------------------------------------
+sub OperationFailed
+{
+    my $msg1 = shift(@_);
+    my $msg2 = shift(@_);
+    print STDERR "$msg1; $msg2\n";
+
+    return ();
+}
+
+# -----------------------------------------------------------------
 # NAME: MakeAssetPath
 # -----------------------------------------------------------------
 sub MakeAssetPath
@@ -210,12 +222,13 @@ sub RequireLocalAsset
     return if -e $file;
 
     my $result = $gRemoteControl->GetAsset($assetid);
-    print STDERR "Unable to retrieve asset $assetid; " . $result->{_Message} . "\n", return
+    return &OperationFailed("Unable to retrieve asset $assetid",$result->{_Message})
         if $result->{_Success} <= 0;
 
     my $asset = $result->{'Asset'};
 
-    print STDERR "unable to open asset file $file; $!\n", return unless open($fh,">$file");
+    return &OperationFailed("Unable to open asset file $file",$!)
+        unless open($fh,">$file");
     print $fh encode_json($result->{'Asset'});
     close $fh;
 }
@@ -233,7 +246,8 @@ sub SaveAsset
 
     return if -e $file;
 
-    print STDERR "unable to open asset file $file; $!\n", return unless open($fh,">$file");
+    return &OperationFailed("Unable to open asset file $file",$!)
+        unless open($fh,">$file");
     print $fh encode_json($asset);
     close $fh;
 }
@@ -247,7 +261,7 @@ sub GetAssetDependencies
     my $asset = shift(@_);
     
     my $result = $gRemoteControl->GetDependentAssets($asset);
-    print STDERR "Unable to retrieve dependencies for $asset; " . $result->{_Message} . "\n", return ()
+    return &OperationFailed("Unable to retrieve dependencies for $asset",$result->{_Message})
         if $result->{_Success} <= 0;
 
     return @{$result->{'DependentAssets'}};
@@ -348,7 +362,7 @@ sub ProcessItem
     # ---------- Grab and save the asset ----------
     my $assetid = $item->{'AssetID'};
     my $result = $gRemoteControl->GetAsset($assetid);
-    print STDERR "Failed to get asset for $assetid; " . $result->{_Message} . "\n", return
+    return &OperationFailed("Failed to get asset for $assetid",$result->{_Message})
         if $result->{_Success} <= 0;
 
     my $asset = $result->{'Asset'};
@@ -380,7 +394,8 @@ sub ProcessItem
     $invitem->{'Permissions'} = $perms;
 
     my $file = &CleanPath($gInventoryRoot . $path . '/' . $name);
-    open($fh,">$file") || die "unable to open file $file; $!\n";
+    return &OperationFailed("unable to open file $file",$!)
+        unless open($fh,">$file");
     print $fh to_json($invitem,{pretty => 1});
     close $fh;
 }
