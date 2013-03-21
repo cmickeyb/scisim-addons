@@ -48,6 +48,9 @@ using System.Reflection;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
 
+using System.Collections;
+using System.Collections.Generic;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -70,6 +73,10 @@ namespace Dispatcher
         bool RegisterEndPoint(UUID id, EndPoint ep);
         bool UnregisterEndPoint(UUID id);
         EndPoint LookupEndPoint(UUID id);
+
+        UUID CreateDomainCapability(HashSet<String> domainList, UUID userid, int lifespan);
+        UUID CreateDomainCapability(String domain, UUID userid, int lifespan);
+        bool DestroyDomainCapability(UUID capability);
 
         bool RegisterMessageType(Type messagetype);
         bool UnregisterMessageType(Type messagetype);

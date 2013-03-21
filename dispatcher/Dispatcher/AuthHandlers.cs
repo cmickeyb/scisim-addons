@@ -61,6 +61,7 @@ using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Framework.Servers;
 using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Framework.Console;
 using OpenSim.Services.Interfaces;
 
 using System.Collections;
@@ -81,6 +82,8 @@ namespace Dispatcher.Handlers
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
+        private ICommandConsole m_console;
+        
         public const String MasterDomain = "MASTER";
         
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -91,11 +94,17 @@ namespace Dispatcher.Handlers
             public UserAccount Account { get; set; }
             public HashSet<String> DomainList { get; set; }
 
-            public CapabilityInfo(UUID cap, UserAccount acct, HashSet<String> dlist)
+            public DateTime ExpirationTime { get; set; }
+            public TimeSpan LifeSpan { get; set; }
+
+            public CapabilityInfo(UUID cap, UserAccount acct, HashSet<String> dlist, double idletime)
             {
                 Capability = cap;
                 Account = acct;
                 DomainList = dlist;
+
+                LifeSpan = TimeSpan.FromSeconds(idletime);
+                ExpirationTime = DateTime.Now.Add(LifeSpan);
             }
 
             public CapabilityInfo()
@@ -103,6 +112,9 @@ namespace Dispatcher.Handlers
                 Capability = UUID.Random();
                 Account = null;
                 DomainList = new HashSet<String>();
+
+                LifeSpan = TimeSpan.FromSeconds(0.0);
+                ExpirationTime = DateTime.Now;
             }
         }
 
@@ -124,10 +136,31 @@ namespace Dispatcher.Handlers
             m_maxLifeSpan = config.GetInt("MaxLifeSpan",m_maxLifeSpan);
             m_useAuthentication = config.GetBoolean("UseAuthentication",m_useAuthentication);
 
-            m_dispatcher.RegisterPreOperationHandler(typeof(AuthRequest),AuthenticateRequestHandler);
-            m_dispatcher.RegisterMessageType(typeof(AuthResponse));
+            m_dispatcher.RegisterPreOperationHandler(typeof(CreateCapabilityRequest),CreateCapabilityRequestHandler);
+            m_dispatcher.RegisterOperationHandler(m_dispatcher.Domain,typeof(RenewCapabilityRequest),RenewCapabilityRequestHandler);
+            m_dispatcher.RegisterMessageType(typeof(CapabilityResponse));
+
+            m_console = MainConsole.Instance;
+            m_console.Commands.AddCommand("Dispatcher", false, "dispatcher show caps", "dispatch show capabilities",
+                                          "Dump the capabilities table", "", HandleShowCapabilities);
+            
         }
 
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        /// -----------------------------------------------------------------
+        private void HandleShowCapabilities(string module, string[] cmd)
+        {
+            ConsoleDisplayTable cdt = new ConsoleDisplayTable();
+            cdt.Indent = 2;
+            cdt.AddColumn("Capability",36);
+            cdt.AddColumn("User Name",50);
+
+            m_console.OutputFormat(cdt.ToString());
+        }
+        
+                
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>
@@ -158,6 +191,9 @@ namespace Dispatcher.Handlers
             {
                 if (capability.DomainList.Contains(irequest._Domain) || capability.DomainList.Contains(MasterDomain))
                 {
+                    capability.ExpirationTime = DateTime.Now.Add(capability.LifeSpan);
+                    m_authCache.Update(irequest._Capability,capability,capability.LifeSpan);
+                    
                     irequest._UserAccount = capability.Account;
                     return true;
                 }
@@ -170,29 +206,60 @@ namespace Dispatcher.Handlers
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        public UUID CreateDomainCapability(Scene scene, HashSet<String> dlist, UserAccount acct, int lifespan)
+        public bool DestroyDomainCapability(UUID capability)
         {
-            UUID capability = UUID.Random();
-            m_authCache.AddOrUpdate(capability,new CapabilityInfo(capability,acct,dlist),lifespan);
-
-            return capability;
+            return m_authCache.Remove(capability);
         }
 
-        public UUID CreateDomainCapability(Scene scene, String domain, UUID userid, int lifespan)
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public UUID CreateDomainCapability(String domain, UUID userid, int lifespan)
         {
-            UserAccount acct = scene.UserAccountService.GetUserAccount(scene.RegionInfo.ScopeID,userid);
+            HashSet<string> domainList = new HashSet<String>();
+            domainList.Add(domain);
+            
+            return CreateDomainCapability(domainList,userid,lifespan);
+        }
+        
+        public UUID CreateDomainCapability(HashSet<String> domainList, UUID userid, int lifespan)
+        {
+            // Sanity check
+            if (m_sceneList.Count == 0)
+            {
+                m_log.ErrorFormat("[AuthHandler] No scenes");
+                return UUID.Zero;
+            }
+            
+            // This method is called from region modules that are trusted so we allow any duration
+            // of capability lifespan, 
+
+            if (lifespan < 0)
+            {
+                m_log.WarnFormat("[AuthHandler] lifespan must be zero or greater; {0}",lifespan);
+                return UUID.Zero;
+            }
+            
+            // special case for the "infinite" lifespan
+            if (lifespan == 0)
+                lifespan = Int32.MaxValue;
+            
+            //TimeSpan span = TimeSpan.FromSeconds(lifespan);
+            int span = lifespan;
+            
+            // grab the user account information
+            UserAccount acct = m_sceneList[0].UserAccountService.GetUserAccount(m_sceneList[0].RegionInfo.ScopeID,userid);
             if (acct == null)
             {
                 m_log.WarnFormat("[AuthHandler] unable to create capability for user {0}",userid);
                 return UUID.Zero;
             }
 
-            HashSet<String> dlist = new HashSet<String>();
-            dlist.Add(domain);
-
-            lifespan = Math.Min(lifespan,m_maxLifeSpan);
-
-            return CreateDomainCapability(scene,dlist,acct,lifespan);
+            UUID capability = UUID.Random();
+            //m_authCache.AddOrUpdate(capability,new CapabilityInfo(capability,acct,domainList),span);
+            m_authCache.AddOrUpdate(capability,new CapabilityInfo(capability,acct,domainList,span),span);
+            return capability;
         }
 
 #endregion
@@ -213,12 +280,12 @@ namespace Dispatcher.Handlers
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        protected ResponseBase AuthenticateRequestHandler(RequestBase irequest)
+        protected ResponseBase CreateCapabilityRequestHandler(RequestBase irequest)
         {
-            if (irequest.GetType() != typeof(AuthRequest))
+            if (irequest.GetType() != typeof(CreateCapabilityRequest))
                 return OperationFailed("wrong type");
             
-            AuthRequest request = (AuthRequest)irequest;
+            CreateCapabilityRequest request = (CreateCapabilityRequest)irequest;
 
             // Get a handle to the scene for the request to be used later
             
@@ -241,21 +308,57 @@ namespace Dispatcher.Handlers
                 account = scene.UserAccountService.GetUserAccount(scene.RegionInfo.ScopeID,request.EmailAddress);
             
             if (account == null)
-                OperationFailed(String.Format("failed to locate account for user {0}",request.UserID.ToString()));
+                return OperationFailed(String.Format("failed to locate account for user {0}",request.UserID.ToString()));
 
             // Authenticate the user with the hashed passwd from the request
             if (scene.AuthenticationService.Authenticate(account.PrincipalID,request.HashedPasswd,0) == String.Empty)
-                OperationFailed(String.Format("failed to authenticate user {0}",request.UserID.ToString()));
+                return OperationFailed(String.Format("failed to authenticate user {0}",request.UserID.ToString()));
             
             HashSet<String> dlist = new HashSet<String>(request.DomainList);
 
-            int lifespan = Math.Min(request.LifeSpan,m_maxLifeSpan);
-            
+            // Clamp the lifespan for externally requested capabilities, region modules can register
+            // caps with longer or infinite lifespans
+            if (request.LifeSpan <= 0)
+                return OperationFailed(String.Format("lifespan must be greater than 0 {0}",request.LifeSpan));
+                
+            //TimeSpan span = TimeSpan.FromSeconds(Math.Min(request.LifeSpan,m_maxLifeSpan));
+            int span = Math.Min(request.LifeSpan,m_maxLifeSpan);
+
             // add it to the authentication cache
             UUID capability = request._Capability == UUID.Zero ? UUID.Random() : request._Capability;
-            m_authCache.AddOrUpdate(capability,new CapabilityInfo(capability,account,dlist),lifespan);
+            m_authCache.AddOrUpdate(capability,new CapabilityInfo(capability,account,dlist,span),span);
 
-            return new AuthResponse(capability,lifespan);
+            //return new CapabilityResponse(capability,Convert.ToInt32(span.TotalSeconds));
+            return new CapabilityResponse(capability,span);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        protected ResponseBase RenewCapabilityRequestHandler(RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(RenewCapabilityRequest))
+                return OperationFailed("wrong type");
+            
+            RenewCapabilityRequest request = (RenewCapabilityRequest)irequest;
+
+            // Get the domains...
+            HashSet<String> dlist = new HashSet<String>(request.DomainList);
+
+            // Clamp the lifespan for externally requested capabilities, region modules can register
+            // caps with longer or infinite lifespans
+            if (request.LifeSpan <= 0)
+                return OperationFailed(String.Format("lifespan must be greater than 0 {0}",request.LifeSpan));
+                
+            //TimeSpan span = TimeSpan.FromSeconds(Math.Min(request.LifeSpan,m_maxLifeSpan));
+            int span = Math.Min(request.LifeSpan,m_maxLifeSpan);
+            
+            // update the capability cache
+            m_authCache.AddOrUpdate(request._Capability,new CapabilityInfo(request._Capability,request._UserAccount,dlist,span),span);
+
+            //return new CapabilityResponse(request._Capability,Convert.ToInt32(span.TotalSeconds));
+            return new CapabilityResponse(request._Capability,span);
         }
 #endregion
     }

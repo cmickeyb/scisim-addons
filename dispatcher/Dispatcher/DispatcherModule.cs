@@ -451,6 +451,33 @@ namespace Dispatcher
             return false;
         }
 
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        /// -----------------------------------------------------------------
+        public UUID CreateDomainCapability(HashSet<String> domainList, UUID userid, int lifespan)
+        {
+            return m_authorizer.CreateDomainCapability(domainList,userid,lifespan);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        /// -----------------------------------------------------------------
+        public UUID CreateDomainCapability(String domain, UUID userid, int lifespan)
+        {
+            return m_authorizer.CreateDomainCapability(domain,userid,lifespan);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        /// -----------------------------------------------------------------
+        public bool DestroyDomainCapability(UUID capability)
+        {
+            return m_authorizer.DestroyDomainCapability(capability);
+        }
+        
 #endregion
 
 #region Control Members

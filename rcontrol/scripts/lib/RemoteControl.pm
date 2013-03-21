@@ -112,7 +112,7 @@ sub AuthenticateAvatarByUUID
     ## $params->{'domainlist'} = \@gDomainList;
     $params->{'domainlist'} = $self->{DOMAINLIST};
 
-    return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
+    return $self->_PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',$params);
 }
 
 # -----------------------------------------------------------------
@@ -132,7 +132,7 @@ sub AuthenticateAvatarByName
     ## $params->{'domainlist'} = \@gDomainList;
     $params->{'domainlist'} = $self->{DOMAINLIST};
 
-    return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
+    return $self->_PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',$params);
 }
 
 # -----------------------------------------------------------------
@@ -150,7 +150,7 @@ sub AuthenticateAvatarByEmail
     ## $params->{'domainlist'} = \@gDomainList;
     $params->{'domainlist'} = $self->{DOMAINLIST};
 
-    return $self->_PostRequest('Dispatcher','Dispatcher.Messages.AuthRequest',$params);
+    return $self->_PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',$params);
 }
 
 # -----------------------------------------------------------------

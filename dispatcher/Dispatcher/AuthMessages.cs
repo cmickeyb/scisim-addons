@@ -66,7 +66,7 @@ namespace Dispatcher.Messages
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
-    public class AuthRequest : RequestBase
+    public class CreateCapabilityRequest : RequestBase
     {
         [JsonProperty]
         public UUID UserID { get; set; }
@@ -94,7 +94,7 @@ namespace Dispatcher.Messages
         /// 
         /// </summary>
         // -----------------------------------------------------------------
-        public AuthRequest()
+        public CreateCapabilityRequest()
         {
             UserID = UUID.Zero;
             HashedPasswd = "";
@@ -109,7 +109,30 @@ namespace Dispatcher.Messages
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
-    public class AuthResponse : ResponseBase
+    public class RenewCapabilityRequest : RequestBase
+    {
+        [JsonProperty]
+        public int LifeSpan { get; set; }
+
+        [JsonProperty]
+        public List<String> DomainList { get; set; }
+        
+        // -----------------------------------------------------------------
+        /// <summary>
+        /// 
+        /// </summary>
+        // -----------------------------------------------------------------
+        public RenewCapabilityRequest()
+        {
+            LifeSpan = 30;
+            DomainList = new List<String>();
+        }
+    }
+    
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class CapabilityResponse : ResponseBase
     {
         [JsonProperty]
         public UUID Capability { get; set; }
@@ -122,7 +145,7 @@ namespace Dispatcher.Messages
         /// 
         /// </summary>
         // -----------------------------------------------------------------
-        public AuthResponse(UUID cap, int lifespan) : base(ResponseCode.Success,"")
+        public CapabilityResponse(UUID cap, int lifespan) : base(ResponseCode.Success,"")
         {
             Capability = cap;
             LifeSpan = lifespan;
