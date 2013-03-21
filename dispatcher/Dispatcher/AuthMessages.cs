@@ -75,7 +75,7 @@ namespace Dispatcher.Messages
         public string HashedPasswd { get; set; }
 
         [JsonProperty]
-        public int LifeSpan { get; set; }
+        public double LifeSpan { get; set; }
 
         [JsonProperty]
         public String FirstName { get; set; }
@@ -98,7 +98,7 @@ namespace Dispatcher.Messages
         {
             UserID = UUID.Zero;
             HashedPasswd = "";
-            LifeSpan = 30;
+            LifeSpan = 300.0;
             FirstName = "";
             LastName = "";
             EmailAddress = "";
@@ -112,7 +112,7 @@ namespace Dispatcher.Messages
     public class RenewCapabilityRequest : RequestBase
     {
         [JsonProperty]
-        public int LifeSpan { get; set; }
+        public double LifeSpan { get; set; }
 
         [JsonProperty]
         public List<String> DomainList { get; set; }
@@ -138,14 +138,14 @@ namespace Dispatcher.Messages
         public UUID Capability { get; set; }
 
         [JsonProperty]
-        public int LifeSpan { get; set; }
+        public double LifeSpan { get; set; }
 
         // -----------------------------------------------------------------
         /// <summary>
         /// 
         /// </summary>
         // -----------------------------------------------------------------
-        public CapabilityResponse(UUID cap, int lifespan) : base(ResponseCode.Success,"")
+        public CapabilityResponse(UUID cap, double lifespan) : base(ResponseCode.Success,"")
         {
             Capability = cap;
             LifeSpan = lifespan;

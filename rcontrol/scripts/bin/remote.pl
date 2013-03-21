@@ -261,6 +261,31 @@ sub cAUTHENTICATE
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
+$gCmdinfo->AddCommand('renew','renew a capability to be used later');
+$gCmdinfo->AddCommandParams('renew','-l|--lifespan',' <integer>','duration in seconds');
+
+sub cRENEWAUTH
+{
+    my $gLifeSpan = 300;
+    $gOptions->{'l|lifespan=i'} = \$gLifeSpan;
+
+    if (! GetOptions(%{$gOptions}))
+    {
+	$gCmdinfo->DumpCommands('renew',"Unknown option");
+    }
+    
+    &CheckGlobals("renew");
+    $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+
+    my $result = $gRemoteControl->RenewCapability($gMessage, $gLifeSpan);
+    if ($result->{_Success} <= 0)
+    {
+        print STDERR "Operation failed; " . $result->{_Message} . "\n";
+    }
+}
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
 $gCmdinfo->AddCommand('info','get binding information from the dispatcher');
 
 sub cINFO
@@ -731,6 +756,7 @@ sub Main
     my $paramCmd = ($#ARGV >= 0) ? shift @ARGV : "HELP";
     
     &cAUTHENTICATE, exit	if ($paramCmd =~ m/^auth$/i);
+    &cRENEWAUTH, exit		if ($paramCmd =~ m/^renew$/i);
     &cINFO, exit		if ($paramCmd =~ m/^info$/i);
     &cMESSAGEFORMAT, exit	if ($paramCmd =~ m/^message$/i);
     

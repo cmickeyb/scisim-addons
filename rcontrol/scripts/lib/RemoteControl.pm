@@ -154,6 +154,21 @@ sub AuthenticateAvatarByEmail
 }
 
 # -----------------------------------------------------------------
+# NAME: RenewCapability
+# -----------------------------------------------------------------
+sub RenewCapability
+{
+    my $self = shift;
+    my ($lifespan) = @_;
+
+    my $params = {};
+    $params->{'lifespan'} = $lifespan if defined $lifespan;
+    $params->{'domainlist'} = $self->{DOMAINLIST};
+
+    return $self->_PostRequest('Dispatcher','Dispatcher.Messages.RenewCapabilityRequest',$params);
+}
+
+# -----------------------------------------------------------------
 # NAME: Info
 # -----------------------------------------------------------------
 sub Info
