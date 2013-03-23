@@ -75,7 +75,7 @@ namespace Dispatcher.Messages
         public string HashedPasswd { get; set; }
 
         [JsonProperty]
-        public double LifeSpan { get; set; }
+        public int LifeSpan { get; set; }
 
         [JsonProperty]
         public String FirstName { get; set; }
@@ -98,7 +98,7 @@ namespace Dispatcher.Messages
         {
             UserID = UUID.Zero;
             HashedPasswd = "";
-            LifeSpan = 300.0;
+            LifeSpan = 300;
             FirstName = "";
             LastName = "";
             EmailAddress = "";
@@ -112,7 +112,7 @@ namespace Dispatcher.Messages
     public class RenewCapabilityRequest : RequestBase
     {
         [JsonProperty]
-        public double LifeSpan { get; set; }
+        public int LifeSpan { get; set; }
 
         [JsonProperty]
         public List<String> DomainList { get; set; }
@@ -124,9 +124,21 @@ namespace Dispatcher.Messages
         // -----------------------------------------------------------------
         public RenewCapabilityRequest()
         {
-            LifeSpan = 30;
+            LifeSpan = 300;
             DomainList = new List<String>();
         }
+    }
+    
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class DestroyCapabilityRequest : RequestBase
+    {
+        // -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public DestroyCapabilityRequest() {}
     }
     
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -138,14 +150,14 @@ namespace Dispatcher.Messages
         public UUID Capability { get; set; }
 
         [JsonProperty]
-        public double LifeSpan { get; set; }
+        public int LifeSpan { get; set; }
 
         // -----------------------------------------------------------------
         /// <summary>
         /// 
         /// </summary>
         // -----------------------------------------------------------------
-        public CapabilityResponse(UUID cap, double lifespan) : base(ResponseCode.Success,"")
+        public CapabilityResponse(UUID cap, int lifespan) : base(ResponseCode.Success,"")
         {
             Capability = cap;
             LifeSpan = lifespan;

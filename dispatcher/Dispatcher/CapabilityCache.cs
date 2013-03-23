@@ -79,17 +79,17 @@ namespace Dispatcher.Utils
         public UserAccount Account { get; set; }
         public HashSet<String> DomainList { get; set; }
 
-        public DateTime ExpirationTime { get; set; }
-        public TimeSpan LifeSpan { get; set; }
+        public int LastRefresh { get; set; }
+        public int LifeSpan { get; set; }
 
-        public CapabilityInfo(UUID cap, UserAccount acct, HashSet<String> dlist, double idletime)
+        public CapabilityInfo(UUID cap, UserAccount acct, HashSet<String> dlist, int span)
         {
             Capability = cap;
             Account = acct;
             DomainList = dlist;
 
-            LifeSpan = TimeSpan.FromSeconds(idletime);
-            ExpirationTime = DateTime.Now.Add(LifeSpan);
+            LifeSpan = span * 1000;
+            LastRefresh = Util.EnvironmentTickCount();
         }
 
         public CapabilityInfo()
@@ -98,8 +98,8 @@ namespace Dispatcher.Utils
             Account = null;
             DomainList = new HashSet<String>();
 
-            LifeSpan = TimeSpan.FromSeconds(0.0);
-            ExpirationTime = DateTime.Now;
+            LifeSpan = 0;
+            LastRefresh = 0;
         }
     }
 
@@ -109,8 +109,8 @@ namespace Dispatcher.Utils
     {
         public Dictionary<UUID,CapabilityInfo> CapabilityCollection { get; set; }
 
-        protected static double PurgeInterval = 60.0;
-        protected DateTime NextPurge { get; set; }
+        protected static int PurgeInterval = 60 * 1000;
+        protected int LastPurge { get; set; }
 
         /// -----------------------------------------------------------------
         /// <summary>
@@ -119,18 +119,18 @@ namespace Dispatcher.Utils
         public CapabilityCache()
         {
             CapabilityCollection = new Dictionary<UUID,CapabilityInfo>();
-            NextPurge = DateTime.Now.AddSeconds(PurgeInterval);
+            LastPurge = Util.EnvironmentTickCount();
         }
             
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
-        public bool AddCapability(UUID cap, UserAccount acct, HashSet<String> dlist, double idle)
+        public bool AddCapability(UUID cap, UserAccount acct, HashSet<String> dlist, int span)
         {
             lock (CapabilityCollection)
             {
-                CapabilityInfo capinfo = new CapabilityInfo(cap,acct,dlist,idle);
+                CapabilityInfo capinfo = new CapabilityInfo(cap,acct,dlist,span);
                 CapabilityCollection.Add(cap,capinfo);
                 return true;
             }
@@ -186,7 +186,8 @@ namespace Dispatcher.Utils
                 
                 acct = capinfo.Account;
                 dlist = capinfo.DomainList;
-                capinfo.ExpirationTime = DateTime.Now.Add(capinfo.LifeSpan);
+                capinfo.LastRefresh = Util.EnvironmentTickCount();
+
                 return true;
             }
         }
@@ -195,7 +196,7 @@ namespace Dispatcher.Utils
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
-        public bool UpdateCapability(UUID cap, HashSet<String> dlist, double idle)
+        public bool UpdateCapability(UUID cap, HashSet<String> dlist, int span)
         {
             lock (CapabilityCollection)
             {
@@ -205,8 +206,8 @@ namespace Dispatcher.Utils
                     return false;
                 
                 capinfo.DomainList = dlist;
-                capinfo.LifeSpan = TimeSpan.FromSeconds(idle);
-                capinfo.ExpirationTime = DateTime.Now.Add(capinfo.LifeSpan);
+                capinfo.LifeSpan = span * 1000;
+                capinfo.LastRefresh = Util.EnvironmentTickCount();
 
                 return true;
             }
@@ -218,21 +219,24 @@ namespace Dispatcher.Utils
         /// -----------------------------------------------------------------
         protected void PurgeCache()
         {
-            DateTime now = DateTime.Now;
-            if (NextPurge < now)
+            int now = Util.EnvironmentTickCount();
+            if (Util.EnvironmentTickCountCompare(now,LastPurge) < PurgeInterval)
                 return;
                 
             List<UUID> purgelist = new List<UUID>();
             foreach (KeyValuePair<UUID,CapabilityInfo> kvp in CapabilityCollection)
             {
-                if (kvp.Value.ExpirationTime < now)
+                int span = kvp.Value.LifeSpan;
+                int refresh = kvp.Value.LastRefresh;
+                
+                if (span > 0 && Util.EnvironmentTickCountCompare(now,refresh) > span)
                     purgelist.Add(kvp.Key);
             }
                 
             foreach (UUID cap in purgelist)
                 CapabilityCollection.Remove(cap);
 
-            NextPurge = DateTime.Now.AddSeconds(PurgeInterval);
+            LastPurge = now;
         }
     }
 }

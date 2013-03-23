@@ -88,7 +88,7 @@ namespace Dispatcher.Handlers
         
         public const String MasterDomain = "MASTER";
         
-        private double m_maxLifeSpan = 300.0;
+        private int m_maxLifeSpan = 300;
         private bool m_useAuthentication = true;
         private DispatcherModule m_dispatcher = null;
         private List<Scene> m_sceneList = new List<Scene>();
@@ -104,11 +104,12 @@ namespace Dispatcher.Handlers
         public AuthHandlers(IConfig config, DispatcherModule dispatcher)
         {
             m_dispatcher = dispatcher;
-            m_maxLifeSpan = config.GetDouble("MaxLifeSpan",m_maxLifeSpan);
+            m_maxLifeSpan = config.GetInt("MaxLifeSpan",m_maxLifeSpan);
             m_useAuthentication = config.GetBoolean("UseAuthentication",m_useAuthentication);
 
             m_dispatcher.RegisterPreOperationHandler(typeof(CreateCapabilityRequest),CreateCapabilityRequestHandler);
             m_dispatcher.RegisterOperationHandler(m_dispatcher.Domain,typeof(RenewCapabilityRequest),RenewCapabilityRequestHandler);
+            m_dispatcher.RegisterOperationHandler(m_dispatcher.Domain,typeof(DestroyCapabilityRequest),DestroyCapabilityRequestHandler);
             m_dispatcher.RegisterMessageType(typeof(CapabilityResponse));
 
             m_console = MainConsole.Instance;
@@ -130,11 +131,15 @@ namespace Dispatcher.Handlers
             cdt.AddColumn("User Name",30);
             cdt.AddColumn("Domains",50);
 
+            int now = Util.EnvironmentTickCount();
+
             List<CapabilityInfo> caps = m_capCache.DumpCapabilities();
             foreach (CapabilityInfo cap in caps)
             {
+                int span = (cap.LifeSpan - Util.EnvironmentTickCountSubtract(now,cap.LastRefresh)) / 1000;
                 string name = cap.Account.FirstName + ' ' + cap.Account.LastName;
-                string time = cap.ExpirationTime.ToLongTimeString();
+                string time = DateTime.Now.AddSeconds(span).ToLongTimeString();
+                
                 string doms = "";
                 foreach (string s in cap.DomainList)
                     doms += s + ",";
@@ -175,7 +180,7 @@ namespace Dispatcher.Handlers
             HashSet<String> dlist;
             if (m_capCache.GetCapability(irequest._Capability, out acct, out dlist))
             {
-                if (dlist.Contains(irequest._Domain) || dlist.Contains(MasterDomain))
+                if (irequest._Domain == m_dispatcher.Domain || dlist.Contains(irequest._Domain) || dlist.Contains(MasterDomain))
                 {
                     irequest._UserAccount = acct;
                     return true;
@@ -198,15 +203,15 @@ namespace Dispatcher.Handlers
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        public UUID CreateDomainCapability(String domain, UUID userid, double idle)
+        public UUID CreateDomainCapability(String domain, UUID userid, int span)
         {
             HashSet<string> domainList = new HashSet<String>();
             domainList.Add(domain);
             
-            return CreateDomainCapability(domainList,userid,idle);
+            return CreateDomainCapability(domainList,userid,span);
         }
         
-        public UUID CreateDomainCapability(HashSet<String> domainList, UUID userid, double idle)
+        public UUID CreateDomainCapability(HashSet<String> domainList, UUID userid, int span)
         {
             // Sanity check
             if (m_sceneList.Count == 0)
@@ -218,15 +223,11 @@ namespace Dispatcher.Handlers
             // This method is called from region modules that are trusted so we allow any duration
             // of capability lifespan, 
 
-            if (idle < 0)
+            if (span < 0)
             {
-                m_log.WarnFormat("[AuthHandler] idle must be zero or greater; {0}",idle);
+                m_log.WarnFormat("[AuthHandler] idle must be zero or greater; {0}",span);
                 return UUID.Zero;
             }
-            
-            // special case for the "infinite" idle
-            if (idle == 0)
-                idle = Double.MaxValue;
             
             // grab the user account information
             UserAccount acct = m_sceneList[0].UserAccountService.GetUserAccount(m_sceneList[0].RegionInfo.ScopeID,userid);
@@ -237,7 +238,7 @@ namespace Dispatcher.Handlers
             }
 
             UUID capability = UUID.Random();
-            m_capCache.AddCapability(capability,acct,domainList,idle);
+            m_capCache.AddCapability(capability,acct,domainList,span);
             return capability;
         }
 
@@ -300,13 +301,13 @@ namespace Dispatcher.Handlers
             if (request.LifeSpan <= 0)
                 return OperationFailed(String.Format("lifespan must be greater than 0 {0}",request.LifeSpan));
                 
-            double idle = Math.Min(request.LifeSpan,m_maxLifeSpan);
+            int span = Math.Min(request.LifeSpan,m_maxLifeSpan);
 
             // add it to the authentication cache
             UUID capability = UUID.Random();
-            m_capCache.AddCapability(capability,account,dlist,idle);
+            m_capCache.AddCapability(capability,account,dlist,span);
 
-            return new CapabilityResponse(capability,idle);
+            return new CapabilityResponse(capability,span);
         }
 
         /// -----------------------------------------------------------------
@@ -328,13 +329,31 @@ namespace Dispatcher.Handlers
             if (request.LifeSpan <= 0)
                 return OperationFailed(String.Format("lifespan must be greater than 0 {0}",request.LifeSpan));
                 
-            double idle = Math.Min(request.LifeSpan,m_maxLifeSpan);
+            int span = Math.Min(request.LifeSpan,m_maxLifeSpan);
             
             // update the capability cache
-            if (! m_capCache.UpdateCapability(request._Capability,dlist,idle))
+            if (! m_capCache.UpdateCapability(request._Capability,dlist,span))
                 return OperationFailed(String.Format("unable to update the capability"));
             
-            return new CapabilityResponse(request._Capability,idle);
+            return new CapabilityResponse(request._Capability,span);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        protected ResponseBase DestroyCapabilityRequestHandler(RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(DestroyCapabilityRequest))
+                return OperationFailed("wrong type");
+            
+            DestroyCapabilityRequest request = (DestroyCapabilityRequest)irequest;
+
+            // update the capability cache
+            if (! m_capCache.RemoveCapability(request._Capability))
+                return OperationFailed(String.Format("unable to remove the capability"));
+            
+            return new ResponseBase(ResponseCode.Success,"");
         }
 #endregion
     }

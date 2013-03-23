@@ -277,7 +277,7 @@ sub cRENEWAUTH
     &CheckGlobals("renew");
     $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
 
-    my $result = $gRemoteControl->RenewCapability($gMessage, $gLifeSpan);
+    my $result = $gRemoteControl->RenewCapability($gLifeSpan);
     if ($result->{_Success} <= 0)
     {
         print STDERR "Operation failed; " . $result->{_Message} . "\n";
