@@ -1,4 +1,4 @@
-  <Project name="quicksort" frameworkVersion="v3_5" path="addon-modules/quicksort/QuickSort" type="Library">
+  <Project name="quicksort" frameworkVersion="v4_0" path="addon-modules/quicksort/QuickSort" type="Library">
      <Configuration name="Debug">
        <Options>
          <OutputPath>../../../bin/</OutputPath>

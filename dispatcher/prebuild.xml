@@ -1,4 +1,4 @@
-  <Project name="DispatcherModule" frameworkVersion="v3_5" path="addon-modules/dispatcher/Dispatcher" type="Library">
+  <Project name="DispatcherModule" frameworkVersion="v4_0" path="addon-modules/dispatcher/Dispatcher" type="Library">
      <Configuration name="Debug">
        <Options>
          <OutputPath>../../../bin/</OutputPath>
@@ -13,7 +13,7 @@
     <!-- Quicksort Module -->
 
     <ReferencePath>../../../bin/</ReferencePath>
-    <Reference name="Newtonsoft.Json.dll" path="../bin/v3_5/" localCopy="true"/>
+    <Reference name="Newtonsoft.Json.dll" path="../bin/v4_0/" localCopy="true"/>
     <Reference name="Mono.Addins.dll" localCopy="false" />
     <Reference name="log4net.dll" localCopy="false" />
     <Reference name="System" localCopy="false"/>

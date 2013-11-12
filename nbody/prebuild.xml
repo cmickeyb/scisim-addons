@@ -1,4 +1,4 @@
-  <Project name="nbody" frameworkVersion="v3_5" path="addon-modules/nbody/N-Body" type="Library">
+  <Project name="nbody" frameworkVersion="v4_0" path="addon-modules/nbody/N-Body" type="Library">
      <Configuration name="Debug">
        <Options>
          <OutputPath>../../../bin/</OutputPath>

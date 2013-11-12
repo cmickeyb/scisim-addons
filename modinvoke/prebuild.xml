@@ -1,4 +1,4 @@
-  <Project name="ModInvokeModule" frameworkVersion="v3_5" path="addon-modules/modinvoke/ModInvoke" type="Library">
+  <Project name="ModInvokeModule" frameworkVersion="v4_0" path="addon-modules/modinvoke/ModInvoke" type="Library">
      <Configuration name="Debug">
        <Options>
          <OutputPath>../../../bin/</OutputPath>

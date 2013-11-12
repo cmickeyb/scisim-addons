@@ -1,4 +1,4 @@
-  <Project name="utility" frameworkVersion="v3_5" path="addon-modules/utility/Utility" type="Library">
+  <Project name="utility" frameworkVersion="v4_0" path="addon-modules/utility/Utility" type="Library">
      <Configuration name="Debug">
        <Options>
          <OutputPath>../../../bin/</OutputPath>
