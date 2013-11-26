@@ -165,6 +165,8 @@ namespace Dispatcher
                 {
                     IPAddress[] ips = Dns.GetHostAddresses(Dns.GetHostName());
                     m_host = ips[0].ToString();
+
+                    m_host = m_config.GetString("HostAddress",m_host);
                     m_udpport = m_config.GetInt("UDPPort",m_udpport);
                     m_abinding = String.Format("{0}:{1}",m_host,m_udpport);
 
