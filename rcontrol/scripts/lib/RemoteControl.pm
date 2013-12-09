@@ -313,7 +313,7 @@ sub CreateObject
     $params->{'Position'} = defined $pos ? $pos : [128.0, 128.0, 50.0];
     $params->{'Rotation'} = defined $rot ? $rot : [0.0, 0.0, 0.0, 1.0];
     $params->{'Velocity'} = defined $vel ? $vel : [0.0, 0.0, 0.0];
-    $params->{'StartParameter'} = $parm;
+    $params->{'StartParameter'} = defined $parm ? $parm : "{}";
 
     return $self->_PostRequest('RemoteControl','RemoteControl.Messages.CreateObjectRequest',$params);
 }

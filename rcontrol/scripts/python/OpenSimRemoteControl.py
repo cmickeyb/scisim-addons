@@ -263,7 +263,7 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: CreateObject
     # -----------------------------------------------------------------
-    def CreateObject(self, asset, pos = None, rot = None, vel = None, name = None, desc = None, parm = 0) :
+    def CreateObject(self, asset, pos = None, rot = None, vel = None, name = None, desc = None, parm = "{}") :
         parms = dict()
         parms['AssetID'] = str(asset)
 
