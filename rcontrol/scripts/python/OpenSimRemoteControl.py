@@ -42,11 +42,16 @@
 # goods and services.
 # -----------------------------------------------------------------
 
-import urllib2
+import sys, os
+import string
+
+import urllib2, socket
 import uuid
 import json
 import md5
 
+## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 class OpenSimRemoteControl() :
 
     # -----------------------------------------------------------------
@@ -99,6 +104,12 @@ class OpenSimRemoteControl() :
             print e.code
             print e.read()
             return json.loads('{"_Success" : 0, "_Message" : "connection failed"}');
+        except urllib2.URLError as e:
+            print e.args
+            return json.loads('{"_Success" : 0, "_Message" : "unknown connection error"}');
+        except :
+            return json.loads('{"_Success" : 0, "_Message" : "unknown error"}');
+            
 
         try:
             data = response.read()
@@ -482,6 +493,45 @@ class OpenSimRemoteControl() :
         parms['SensorData'] = values
 
         return self._PostRequest('RemoteSensor','RemoteSensor.Messages.SensorDataRequest',parms)
+
+## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+class OpenSimRemoteControlAsync(OpenSimRemoteControl) :
+
+    # -----------------------------------------------------------------
+    def __init__(self, endpoint):
+        OpenSimRemoteControl.__init__(self, endpoint, 'async')
+
+        (self.Address, self.Port) = string.split(self.EndPoint,':')
+        self.Port = int(self.Port)
+        # print "Async endpoint set to host %s on port %s" % (self.Address, self.Port)
+
+        self.Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+
+    # -----------------------------------------------------------------
+    def _PostRequest(self, domain, operation, parms):
+        oparms = parms;
+
+        oparms['$type'] = operation
+        oparms['_domain'] = domain
+        oparms['_asyncrequest'] = (self.RequestType == 'async')
+
+        if self.Capability and self.Capability.int != 0 :
+            oparms['_capability'] = str(self.Capability)
+        if self.Scene :
+            oparms['_scene'] = self.Scene
+
+        data = json.dumps(oparms,sort_keys=True)
+        # print "sending: %s to %s:%s" % (data, self.Address, self.Port)
+
+        try :
+            self.Socket.sendto(data, (self.Address, self.Port))
+        except :
+            print 'send failed; ', sys.exc_info()[0]
+            return json.loads('{"_Success" : 0, "_Message" : "unknown error"}')
+
+        return json.loads('{"_Success" : 2}')
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
