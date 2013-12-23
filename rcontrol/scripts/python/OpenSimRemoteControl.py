@@ -58,6 +58,7 @@ class OpenSimRemoteControl() :
     def __init__(self, endpoint, request = 'sync'):
         self.EndPoint = endpoint
         self.RequestType = request
+        self.MessagesSent = 0
 
         self.Capability = uuid.UUID(int=0)
         self.Scene = ''
@@ -99,6 +100,7 @@ class OpenSimRemoteControl() :
         # print json.dumps(oparms,sort_keys=True)
 
         try:
+            self.MessagesSent += 1
             response = urllib2.urlopen(request)
         except urllib2.HTTPError as e:
             print e.code
@@ -526,6 +528,7 @@ class OpenSimRemoteControlAsync(OpenSimRemoteControl) :
         # print "sending: %s to %s:%s" % (data, self.Address, self.Port)
 
         try :
+            self.MessagesSent += 1
             self.Socket.sendto(data, (self.Address, self.Port))
         except :
             print 'send failed; ', sys.exc_info()[0]
