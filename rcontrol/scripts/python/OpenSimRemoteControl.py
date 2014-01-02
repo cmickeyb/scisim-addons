@@ -52,6 +52,30 @@ import md5
 
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+class BulkUpdateItem() :
+
+    # -----------------------------------------------------------------
+    def __init__(self, objectid, pos = None, vel = None, rot = None) :
+        self.ObjectID = objectid
+        self.Position = pos
+        self.Velocity = vel
+        self.Rotation = rot
+
+    # -----------------------------------------------------------------
+    def ConvertForEncoding(self) :
+        info = dict()
+        info['ObjectID'] = self.ObjectID
+        if self.Position :
+            info['Position'] = self.Position
+        if self.Velocity :
+            info['Velocity'] = self.Velocity
+        if self.Rotation :
+            info['Rotation'] = self.Rotation
+            
+        return info
+    
+## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 class OpenSimRemoteControl() :
 
     # -----------------------------------------------------------------
@@ -326,6 +350,18 @@ class OpenSimRemoteControl() :
         parms['ObjectID'] = str(objectid)
 
         return self._PostRequest('RemoteControl','RemoteControl.Messages.GetObjectDataRequest',parms)
+
+
+    # -----------------------------------------------------------------
+    # NAME: BulkDynamics
+    # -----------------------------------------------------------------
+    def BulkDynamics(self, updates) :
+        parms = dict()
+        parms['Updates'] = []
+        for update in updates :
+            parms['Updates'].append(update.ConvertForEncoding())
+
+        return self._PostRequest('RemoteControl','RemoteControl.Messages.BulkDynamicsRequest',parms)
 
     # -----------------------------------------------------------------
     # NAME: GetObjectPosition

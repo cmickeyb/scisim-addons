@@ -105,6 +105,7 @@ namespace RemoteControl.Handlers
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectRotationRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(SetObjectRotationRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(MessageObjectRequest));
+            m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(BulkDynamicsRequest));
 
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectPartsRequest));
 
@@ -138,6 +139,7 @@ namespace RemoteControl.Handlers
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectRotationRequest),GetObjectRotationHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(SetObjectRotationRequest),SetObjectRotationHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(MessageObjectRequest),MessageObjectHandler);
+            m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(BulkDynamicsRequest),SetDynamicsHandler);
 
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectPartsRequest),GetObjectPartsHandler);
 
@@ -418,6 +420,33 @@ namespace RemoteControl.Handlers
             sog.UpdateGroupRotationR(request.Rotation);
 
             return new ObjectRotationResponse(request.ObjectID,sog.GroupRotation);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public Dispatcher.Messages.ResponseBase SetDynamicsHandler(Dispatcher.Messages.RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(BulkDynamicsRequest))
+                return OperationFailed("wrong type of request object");
+            
+            BulkDynamicsRequest request = (BulkDynamicsRequest)irequest;
+
+            foreach (ObjectDynamicsData ddata in request.Updates)
+            {
+                SceneObjectGroup sog = m_scene.GetSceneObjectGroup(ddata.ObjectID);
+                if (sog == null)
+                {
+                    m_log.WarnFormat("[ObjectHandlers] missing requested object; {0}",ddata.ObjectID.ToString());
+                    continue;
+                }
+
+                sog.RootPart.Velocity = ddata.Velocity;
+                sog.UpdateGroupRotationPR(ddata.Position, ddata.Rotation);
+            }
+
+            return new ResponseBase(ResponseCode.Success,"");
         }
 
 #endregion

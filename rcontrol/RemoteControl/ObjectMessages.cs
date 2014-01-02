@@ -49,6 +49,7 @@ using Mono.Addins;
 using System;
 using System.Text;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 using log4net;
 using OpenMetaverse;
@@ -221,6 +222,52 @@ namespace RemoteControl.Messages
             Position = sog.AbsolutePosition;
             Rotation = sog.GroupRotation;
             OwnerID = sog.OwnerID;
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // ObjectDynamics Messages
+    // -----------------------------------------------------------------
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class ObjectDynamicsData
+    {
+        [JsonProperty]
+        public UUID ObjectID { get; set; }
+
+        [JsonProperty]
+        public Vector3 Position { get; set; }
+
+        [JsonProperty]
+        public Vector3 Velocity { get; set; }
+
+        [JsonProperty]
+        public Quaternion Rotation { get; set; }
+
+        public ObjectDynamicsData()
+        {
+            ObjectID = UUID.Zero;
+            Position = new Vector3(0.0f, 0.0f, 0.0f);
+            Velocity = new Vector3(0.0f, 0.0f, 0.0f);
+            Rotation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+        }
+    }
+    
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class BulkDynamicsRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public List<ObjectDynamicsData> Updates { get; set; }
+
+        public BulkDynamicsRequest()
+        {
+            Updates = new List<ObjectDynamicsData>();
         }
     }
 
