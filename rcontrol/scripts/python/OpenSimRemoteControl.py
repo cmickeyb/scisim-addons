@@ -55,11 +55,12 @@ import md5
 class BulkUpdateItem() :
 
     # -----------------------------------------------------------------
-    def __init__(self, objectid, pos = None, vel = None, rot = None) :
+    def __init__(self, objectid, pos = None, vel = None, rot = None, acc = None) :
         self.ObjectID = objectid
         self.Position = pos
         self.Velocity = vel
         self.Rotation = rot
+        self.Acceleration = acc
 
     # -----------------------------------------------------------------
     def ConvertForEncoding(self) :
@@ -71,6 +72,8 @@ class BulkUpdateItem() :
             info['Velocity'] = self.Velocity
         if self.Rotation :
             info['Rotation'] = self.Rotation
+        if self.Acceleration :
+            info['Acceleration'] = self.Acceleration
             
         return info
     

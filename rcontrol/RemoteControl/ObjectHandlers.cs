@@ -443,6 +443,7 @@ namespace RemoteControl.Handlers
                 }
 
                 sog.RootPart.Velocity = ddata.Velocity;
+                sog.RootPart.Acceleration = ddata.Acceleration;
                 sog.UpdateGroupRotationPR(ddata.Position, ddata.Rotation);
             }
 

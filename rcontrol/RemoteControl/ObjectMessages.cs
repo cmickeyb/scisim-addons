@@ -245,6 +245,9 @@ namespace RemoteControl.Messages
         public Vector3 Velocity { get; set; }
 
         [JsonProperty]
+        public Vector3 Acceleration { get; set; }
+
+        [JsonProperty]
         public Quaternion Rotation { get; set; }
 
         public ObjectDynamicsData()
@@ -252,6 +255,7 @@ namespace RemoteControl.Messages
             ObjectID = UUID.Zero;
             Position = new Vector3(0.0f, 0.0f, 0.0f);
             Velocity = new Vector3(0.0f, 0.0f, 0.0f);
+            Acceleration = new Vector3(0.0f, 0.0f, 0.0f);
             Rotation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
         }
     }
