@@ -82,10 +82,12 @@ class BulkUpdateItem() :
 class OpenSimRemoteControl() :
 
     # -----------------------------------------------------------------
-    def __init__(self, endpoint, request = 'sync'):
+    def __init__(self, endpoint, request = 'sync', logfile = None):
         self.EndPoint = endpoint
         self.RequestType = request
         self.MessagesSent = 0
+        self.BytesSent = 0
+        self.LogFile = logfile
 
         self.Capability = uuid.UUID(int=0)
         self.Scene = ''
@@ -128,6 +130,11 @@ class OpenSimRemoteControl() :
 
         try:
             self.MessagesSent += 1
+            self.BytesSent += datalen
+            if self.LogFile :
+                with open(self.LogFile,"a") as fp :
+                    fp.write(data)
+
             response = urllib2.urlopen(request)
         except urllib2.HTTPError as e:
             print e.code
