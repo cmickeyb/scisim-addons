@@ -49,6 +49,21 @@ import urllib2, socket
 import uuid
 import json
 import md5
+from bson import BSON, SON
+
+## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+class Parameters(SON) :
+    def __init__(self, oscontrol, domain, operation) :
+        SON.__init__(self)
+        self['$type'] = operation
+        self['_domain'] = domain
+        self['_asyncrequest'] = (oscontrol.RequestType == 'async')
+
+        if oscontrol.Capability and oscontrol.Capability.int != 0 :
+            self['_capability'] = str(oscontrol.Capability)
+        if oscontrol.Scene :
+            self['_scene'] = oscontrol.Scene
 
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -89,41 +104,27 @@ class OpenSimRemoteControl() :
         self.BytesSent = 0
         self.LogFile = logfile
 
+        self.Binary = False
+
         self.Capability = uuid.UUID(int=0)
         self.Scene = ''
         self.DomainList = ['Dispatcher', 'RemoteControl', 'RemoteSensor']
 
     # -----------------------------------------------------------------
-    def _PostDebug(self, domain, operation, parms):
-        oparms = parms;
-
-        oparms['$type'] = operation
-        oparms['_domain'] = domain
-        oparms['_asyncrequest'] = self.RequestType
-
-        if self.Capability and self.Capability.int != 0 :
-            oparms['_capability'] = str(self.Capability)
-        if self.Scene :
-            oparms['_scene'] = self.Scene
-
+    def _PostDebug(self, oparms):
         print json.dumps(oparms,sort_keys=True)
 
     # -----------------------------------------------------------------
-    def _PostRequest(self, domain, operation, parms):
-        oparms = parms;
-
-        oparms['$type'] = operation
-        oparms['_domain'] = domain
-        oparms['_asyncrequest'] = (self.RequestType == 'async')
-
-        if self.Capability and self.Capability.int != 0 :
-            oparms['_capability'] = str(self.Capability)
-        if self.Scene :
-            oparms['_scene'] = self.Scene
-
-        data = json.dumps(oparms,sort_keys=True)
-        datalen = len(data)
-        headers = { 'Content-Type' : 'application/json', 'Content-Length' : datalen }
+    def _PostRequest(self, oparms):
+        if self.Binary :
+            data = BSON.encode(oparms)
+            datalen = len(data)
+            headers = { 'Content-Type' : 'application/bson', 'Content-Length' : datalen }
+        else :
+            data = json.dumps(oparms,sort_keys=True)
+            datalen = len(data)
+            headers = { 'Content-Type' : 'application/json', 'Content-Length' : datalen }
+            
         request = urllib2.Request(self.EndPoint,data,headers)
 
         # print json.dumps(oparms,sort_keys=True)
@@ -134,6 +135,7 @@ class OpenSimRemoteControl() :
             if self.LogFile :
                 with open(self.LogFile,"a") as fp :
                     fp.write(data)
+                    fp.write("\n")
 
             response = urllib2.urlopen(request)
         except urllib2.HTTPError as e:
@@ -145,7 +147,6 @@ class OpenSimRemoteControl() :
             return json.loads('{"_Success" : 0, "_Message" : "unknown connection error"}');
         except :
             return json.loads('{"_Success" : 0, "_Message" : "unknown error"}');
-            
 
         try:
             data = response.read()
@@ -168,13 +169,13 @@ class OpenSimRemoteControl() :
         m = md5.new()
         m.update(passwd)
 
-        parms = dict()
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest')
         parms['hashedpasswd'] = '$1$' + m.hexdigest()
         parms['userid'] = str(uuid)
         parms['lifespan'] = lifespan
         parms['domainlist'] = self.DomainList
         
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     def AuthenticateAvatarByName(self, name, passwd, lifespan = 3600) :
@@ -183,116 +184,118 @@ class OpenSimRemoteControl() :
 
         names = name.split(' ',2)
 
-        parms = dict()
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest')
         parms['hashedpasswd'] = '$1$' + m.hexdigest()
         parms['firstname'] = names[0]
         parms['lastname'] = names[1]
         parms['lifespan'] = lifespan
         parms['domainlist'] = self.DomainList
         
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     def AuthenticateAvatarByEmail(self, email, passwd, lifespan = 3600) :
         m = md5.new()
         m.update(passwd)
 
-        parms = dict()
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest')
         parms['hashedpasswd'] = '$1$' + m.hexdigest()
         parms['emailaddress'] = email
         parms['lifespan'] = lifespan
         parms['domainlist'] = self.DomainList
         
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',parms)
+        return self._PostRequest(parms)
 
 
     # -----------------------------------------------------------------
     def RenewCapability(self, lifespan) :
-        parms = dict()
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.RenewCapabilityRequest')
         parms['lifespan'] = lifespan
         parms['domainlist'] = self.DomainList
 
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.RenewCapabilityRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     def Info(self) :
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.InfoRequest',{})
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.InfoRequest')
+
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     def MessageFormatRequest(self, message) :
-        parms = dict()
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.MessageFormatRequest')
         parms['MessageName'] = message
         
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.MessageFormatRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: CreateEndPoint
     # -----------------------------------------------------------------
     def CreateEndPoint(self, host, port, life) :
-        parms = dict()
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateEndPointRequest')
         parms['CallbackHost'] = host
         parms['CallbackPort'] = port
         if life :
             parms['LifeSpan'] = life
 
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.CreateEndPointRequest',parms)
+        return self._PostRequest(parms)
     
     # -----------------------------------------------------------------
     # NAME: RenewEndPoint
     # -----------------------------------------------------------------
     def RenewEndPoint(self, endpointid, life) :
-        parms = dict()
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.RenewEndPointRequest')
         parms['EndPointID'] = str(endpointid)
         if life :
             parms['LifeSpan'] = life
         
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.RenewEndPointRequest',parms)
+        return self._PostRequest(parms)
     
     # -----------------------------------------------------------------
     # NAME: CloseEndPoint
     # -----------------------------------------------------------------
     def CloseEndPoint(self, endpointid) :
-        parms = dict()
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CloseEndPointRequest')
         parms['EndPointID'] = str(endpointid)
 
-        return self._PostRequest('Dispatcher','Dispatcher.Messages.CloseEndPointRequest',parms)
+        return self._PostRequest(parms)
     
     # -----------------------------------------------------------------
     # NAME: SendChatMessage
     # -----------------------------------------------------------------
     def SendChatMessage(self, msg, pos) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.ChatRequest')
         parms['Message'] = msg
         parms['Position'] = pos
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.ChatRequest',parms);
+        return self._PostRequest(parms);
 
     # -----------------------------------------------------------------
     # NAME: GetAvatarAppearance
     # -----------------------------------------------------------------
     def GetAvatarAppearance(self, avatarid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAvatarAppearanceRequest')
         parms['AvatarID'] = str(avatarid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.GetAvatarAppearanceRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SetAvatarAppearance
     # -----------------------------------------------------------------
     def SetAvatarAppearance(self, appearance, avatarid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetAvatarAppearanceRequest')
 
         # Serialized appearance
         parms['SerializedAppearance'] = appearance 
         parms['AvatarID'] = str(avatarid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.SetAvatarAppearanceRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: FindObjects
     # -----------------------------------------------------------------
     def FindObjects(self, coord1 = None, coord2 = None, pattern = None, owner = None) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.FindObjectsRequest')
         if coord1 :
             parms['CoordinateA'] = coord1
 
@@ -305,13 +308,13 @@ class OpenSimRemoteControl() :
         if owner :
             parms['OwnerID'] = str(owner)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.FindObjectsRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: CreateObject
     # -----------------------------------------------------------------
     def CreateObject(self, asset, pos = None, rot = None, vel = None, name = None, desc = None, parm = "{}") :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.CreateObjectRequest')
         parms['AssetID'] = str(asset)
 
         if name :
@@ -324,223 +327,223 @@ class OpenSimRemoteControl() :
         parms['Velocity'] = vel if vel else [0.0, 0.0, 0.0]
         parms['StartParameter'] = parm
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.CreateObjectRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: DeleteObject
     # -----------------------------------------------------------------
     def DeleteObject(self, objectid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.DeleteObjectRequest')
         parms['ObjectID'] = str(objectid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.DeleteObjectRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: DeleteAllObject
     # -----------------------------------------------------------------
     def DeleteAllObjects(self) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.DeleteAllObjectsRequest')
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.DeleteAllObjectsRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: GetObjectParts
     # -----------------------------------------------------------------
     def GetObjectParts(self, objectid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectPartsRequest')
         parms['ObjectID'] = str(objectid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.GetObjectPartsRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: GetObjectData
     # -----------------------------------------------------------------
     def GetObjectData(self, objectid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectDataRequest')
         parms['ObjectID'] = str(objectid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.GetObjectDataRequest',parms)
+        return self._PostRequest(parms)
 
 
     # -----------------------------------------------------------------
     # NAME: BulkDynamics
     # -----------------------------------------------------------------
     def BulkDynamics(self, updates) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.BulkDynamicsRequest')
         parms['Updates'] = []
         for update in updates :
             parms['Updates'].append(update.ConvertForEncoding())
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.BulkDynamicsRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: GetObjectPosition
     # -----------------------------------------------------------------
     def GetObjectPosition(self, objectid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectPositionRequest')
         parms['ObjectID'] = str(objectid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.GetObjectPositionRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SetObjectPosition
     # -----------------------------------------------------------------
     def SetObjectPosition(self, objectid, pos = None) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetObjectPositionRequest')
         parms['ObjectID'] = str(objectid)
         parms['Position'] = pos if pos else [128.0, 128.0, 50.0]
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.SetObjectPositionRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: GetObjectRotation
     # -----------------------------------------------------------------
     def GetObjectRotation(self, objectid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectRotationRequest')
         parms['ObjectID'] = str(objectid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.GetObjectRotationRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SetObjectRotation
     # -----------------------------------------------------------------
     def SetObjectRotation(self, objectid, rot = None) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetObjectRotationRequest')
         parms['ObjectID'] = str(objectid)
         parms['Rotation'] = rot if rot else [0.0, 0.0, 0.0, 1.0]
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.SetObjectRotationRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: MessageObject
     # -----------------------------------------------------------------
     def MessageObject(self, objectid, msg) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.MessageObjectRequest')
         parms['ObjectID'] = str(objectid)
         parms['Message'] = msg
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.MessageObjectRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SetPartPosition
     # -----------------------------------------------------------------
     def SetPartPosition(self, objectid, partnum, pos = None) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartPositionRequest')
         parms['ObjectID'] = str(objectid)
         parms['LinkNum'] = partnum
         parms['Position'] = pos if pos else [0.0, 0.0, 0.0]
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.SetPartPositionRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SetPartRotation
     # -----------------------------------------------------------------
     def SetPartRotation(self, objectid, partnum, rot = None) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartRotationRequest')
         parms['ObjectID'] = str(objectid)
         parms['LinkNum'] = partnum
         parms['Rotation'] = rot if rot else [0.0, 0.0, 0.0, 1.0]
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.SetPartRotationRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SetPartScale
     # -----------------------------------------------------------------
     def SetPartScale(self, objectid, partnum, scale = None) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartScaleRequest')
         parms['ObjectID'] = str(objectid)
         parms['LinkNum'] = partnum
         parms['Scale'] = scale if scale else [1.0, 1.0, 1.0]
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.SetPartScaleRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SetPartColor
     # -----------------------------------------------------------------
     def SetPartColor(self, objectid, partnum, color = None, alpha = None) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartColorRequest')
         parms['ObjectID'] = str(objectid)
         parms['LinkNum'] = part
         parms['Color'] = color if color else [0.0, 0.0, 0.0]
         parms['Alpha'] = alpha if alpha else 0.0
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.SetPartColorRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: RegisterTouchCallback
     # -----------------------------------------------------------------
     def RegisterTouchCallback(self, objectid, endpointid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.RegisterTouchCallbackRequest')
         parms['ObjectID'] = str(objectid)
         parms['EndPointID'] = str(endpoint)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.RegisterTouchCallbackRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: UnregisterTouchCallback
     # -----------------------------------------------------------------
     def UnregisterTouchCallback(self, objectid, requestid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.UnregisterTouchCallbackRequest')
         parms['ObjectID'] = str(objectid)
         parms['RequestID'] = str(requestid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.UnregisterTouchCallbackRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: TestAsset
     # -----------------------------------------------------------------
     def TestAsset(self, assetid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.TestAssetRequest')
         parms['AssetID'] = str(assetid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.TestAssetRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: GetAsset
     # -----------------------------------------------------------------
     def GetAsset(self, assetid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAssetRequest')
         parms['AssetID'] = str(assetid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.GetAssetRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: GetAssetFromObject
     # -----------------------------------------------------------------
     def GetAssetFromObject(self, objectid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAssetFromObjectRequest')
         parms['ObjectID'] = str(objectid)
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.GetAssetFromObjectRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: GetDependentAssets
     # -----------------------------------------------------------------
     def GetDependentAssets(self, assetid) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetDependentAssetsRequest')
         parms['AssetID'] = assetid
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.GetDependentAssetsRequest',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: AddAsset
     # -----------------------------------------------------------------
     def AddAsset(self, asset) :
-        parms = dict()
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.AddAsset')
         parms['Asset'] = asset
 
-        return self._PostRequest('RemoteControl','RemoteControl.Messages.AddAsset',parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SensorDataRequest
     # -----------------------------------------------------------------
     def SensorDataRequest(self, family, sensorid, values) :
-        parms = dict()
+        parms = Parameters(self,'RemoteSensor','RemoteSensor.Messages.SensorDataRequest')
         parms['SensorFamily'] = family
         parms['SensorID'] = str(sensorid)
         parms['SensorData'] = values
 
-        return self._PostRequest('RemoteSensor','RemoteSensor.Messages.SensorDataRequest',parms)
+        return self._PostRequest(parms)
 
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -558,20 +561,13 @@ class OpenSimRemoteControlAsync(OpenSimRemoteControl) :
 
 
     # -----------------------------------------------------------------
-    def _PostRequest(self, domain, operation, parms):
-        oparms = parms;
+    def _PostRequest(self, oparms):
+        oparms['_asyncrequest'] = True
 
-        oparms['$type'] = operation
-        oparms['_domain'] = domain
-        oparms['_asyncrequest'] = (self.RequestType == 'async')
-
-        if self.Capability and self.Capability.int != 0 :
-            oparms['_capability'] = str(self.Capability)
-        if self.Scene :
-            oparms['_scene'] = self.Scene
-
-        data = json.dumps(oparms,sort_keys=True)
-        # print "sending: %s to %s:%s" % (data, self.Address, self.Port)
+        if self.Binary :
+            data = BSON.encode(oparms)
+        else :
+            data = json.dumps(oparms,sort_keys=True)
 
         try :
             self.MessagesSent += 1
