@@ -151,9 +151,6 @@ class OpenSimRemoteControl() :
 
         try:
             data = response.read()
-            with open("out","w") as fp :
-                fp.write(data)
-
             if self.Binary :
                 result = BSON(data).decode()
             else :

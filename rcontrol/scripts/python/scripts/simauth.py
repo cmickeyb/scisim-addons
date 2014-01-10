@@ -175,10 +175,15 @@ def main() :
     parser.add_argument('--lifespan', help='Lifespan of the capability in seconds', default=3600, type=int)
     parser.add_argument('--domain', help='Domains associated with the capability', nargs='+', default=['Dispatcher', 'RemoteControl'])
 
+    parser.add_argument('--binary', help='Use binary transport encoding', dest='binary', action='store_true')
+    parser.add_argument('--no-binary', help='Use binary transport encoding', dest='binary', action='store_false')
+    parser.set_defaults(binary = False)
+
     # parser.add_option('-c', '--config', dest = 'config', help = 'config file', metavar = 'CONFIG')
     args = parser.parse_args()
 
     rc = OpenSimRemoteControl.OpenSimRemoteControl(args.endpoint)
+    rc.Binary = args.binary
 
     if args.capability :
         RenewCapability(rc,capability,args.domain,args.lifespan)

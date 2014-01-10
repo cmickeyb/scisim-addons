@@ -84,13 +84,18 @@ def main() :
     eprequired = not endpoint
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--binary', help='Use binary transport encoding', dest='binary', action='store_true')
+    parser.add_argument('--no-binary', help='Use binary transport encoding', dest='binary', action='store_false')
     parser.add_argument('--endpoint', help='URL of the simulator dispatcher', required=eprequired, default=endpoint)
     parser.add_argument('command', help='Command to execute', choices=['info', 'message'], default='info')
     parser.add_argument('message', help='Message type to expand', nargs='*')
+    parser.set_defaults(binary = False)
 
     args = parser.parse_args()
 
     rc = OpenSimRemoteControl.OpenSimRemoteControl(args.endpoint)
+    rc.Binary = args.binary
+
     if args.command == 'info' :
         DumpSimulatorInfo(rc)
     elif args.command == 'message' :
