@@ -68,7 +68,10 @@ using System.Collections.Generic;
 
 using System.Runtime.Serialization;
 
+using System.IO;
+
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -365,6 +368,65 @@ namespace Dispatcher.Messages
             }
         }
 
+        // -----------------------------------------------------------------
+        /// <summary>
+        /// 
+        /// </summary>
+        // -----------------------------------------------------------------
+        public static RequestBase DeserializeFromBinaryData(byte[] data)
+        {
+            List<JsonConverter> clist = new List<JsonConverter>();
+            clist.Add(new Vector3Converter());
+            clist.Add(new UUIDConverter());
+            clist.Add(new QuaternionConverter());
+        
+            TypeNameSerializationBinder binder = new TypeNameSerializationBinder("{0}");
+            JsonSerializerSettings settings = new JsonSerializerSettings();
+            settings.Binder = binder;
+            settings.TypeNameHandling = TypeNameHandling.Objects;
+            settings.Converters = clist;
+
+            JsonSerializer jsonSerializer = JsonSerializer.CreateDefault(settings);
+
+            MemoryStream ms = new MemoryStream(data);
+            BsonReader bson = new BsonReader(ms);
+
+            object result = jsonSerializer.Deserialize(bson, null);
+            if (result == null)
+                return null;
+        
+            return ((RequestBase)result);
+        }
+        
+        // -----------------------------------------------------------------
+        /// <summary>
+        /// 
+        /// </summary>
+        // -----------------------------------------------------------------
+        public byte[] SerializeToBinaryData()
+        {
+            List<JsonConverter> clist = new List<JsonConverter>();
+            clist.Add(new Vector3Converter());
+            clist.Add(new UUIDConverter());
+            clist.Add(new QuaternionConverter());
+
+            // The type name handling is pretty verbose here, but makes deserialization
+            // symmetric, its enough information to figure out how to handle the structures
+            TypeNameSerializationBinder binder = new TypeNameSerializationBinder("{0}, {1}");
+            JsonSerializerSettings settings = new JsonSerializerSettings();
+            settings.Binder = binder;
+            settings.TypeNameHandling = TypeNameHandling.Objects;
+            settings.Converters = clist;
+
+            JsonSerializer jsonSerializer = JsonSerializer.CreateDefault(settings);
+
+            MemoryStream ms = new MemoryStream();
+            BsonWriter bson = new BsonWriter(ms);
+            
+            jsonSerializer.Serialize(bson, this, null);
+            return ms.ToArray();
+        }
+        
         // -----------------------------------------------------------------
         /// <summary>
         /// 

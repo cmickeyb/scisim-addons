@@ -94,7 +94,8 @@ namespace Dispatcher
         private bool   m_enabled    = false;
 
         // these cover configurable properties
-        private string m_httppath = "/Dispatcher";
+        private string m_httpbinpath = "/DispatcherBinary/";
+        private string m_httppath = "/Dispatcher/";
         private int m_udpport = 45325;
         private string m_host = "";
 
@@ -209,6 +210,9 @@ namespace Dispatcher
 
                 // Add a handler to the HTTP server
                 MainServer.Instance.AddHTTPHandler(m_httppath,HandleSynchronousRequest);
+
+                BinaryStreamHandler handler = new BinaryStreamHandler("POST", m_httpbinpath, HandleSynchronousBinaryRequest);
+                MainServer.Instance.AddStreamHandler(handler);
 
                 // Start the timeout thread
                 m_endpointTimer = new System.Timers.Timer(m_maxInterPingTime/4);
@@ -678,6 +682,15 @@ namespace Dispatcher
             {
                 OperationFailed(String.Format("Fatal error; {0}",e.Message));
             }
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public string HandleSynchronousBinaryRequest(byte[] data, string path, string param)
+        {
+            return "";
         }
 
         /// -----------------------------------------------------------------
