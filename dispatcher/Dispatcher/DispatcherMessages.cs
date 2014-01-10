@@ -373,41 +373,6 @@ namespace Dispatcher.Messages
         /// 
         /// </summary>
         // -----------------------------------------------------------------
-        public static RequestBase DeserializeFromBinaryStream(Stream bstream)
-        {
-            List<JsonConverter> clist = new List<JsonConverter>();
-            clist.Add(new Vector3Converter());
-            clist.Add(new UUIDConverter());
-            clist.Add(new QuaternionConverter());
-        
-            TypeNameSerializationBinder binder = new TypeNameSerializationBinder("{0}");
-            JsonSerializerSettings settings = new JsonSerializerSettings();
-            settings.Binder = binder;
-            settings.TypeNameHandling = TypeNameHandling.Objects;
-            settings.Converters = clist;
-
-            JsonSerializer jsonSerializer = JsonSerializer.CreateDefault(settings);
-
-            BsonReader bson = new BsonReader(bstream);
-
-            object result = jsonSerializer.Deserialize(bson, null);
-            if (result == null)
-                return null;
-        
-            return ((RequestBase)result);
-        }
-
-        public static RequestBase DeserializeFromBinaryData(byte[] data)
-        {
-            MemoryStream ms = new MemoryStream(data);
-            return DeserializeFromBinaryStream(ms);
-        }
-        
-        // -----------------------------------------------------------------
-        /// <summary>
-        /// 
-        /// </summary>
-        // -----------------------------------------------------------------
         public byte[] SerializeToBinaryData()
         {
             List<JsonConverter> clist = new List<JsonConverter>();
@@ -437,30 +402,6 @@ namespace Dispatcher.Messages
         /// 
         /// </summary>
         // -----------------------------------------------------------------
-        public static RequestBase DeserializeFromString(string source)
-        {
-            List<JsonConverter> clist = new List<JsonConverter>();
-            clist.Add(new Vector3Converter());
-            clist.Add(new UUIDConverter());
-            clist.Add(new QuaternionConverter());
-        
-            TypeNameSerializationBinder binder = new TypeNameSerializationBinder("{0}");
-            JsonSerializerSettings settings = new JsonSerializerSettings();
-            settings.Binder = binder;
-            settings.TypeNameHandling = TypeNameHandling.Objects;
-            settings.Converters = clist;
-             object result = JsonConvert.DeserializeObject(source,settings);
-            if (result == null)
-                return null;
-        
-            return ((RequestBase)result);
-        }
-
-        // -----------------------------------------------------------------
-        /// <summary>
-        /// 
-        /// </summary>
-        // -----------------------------------------------------------------
         public string SerializeToString()
         {
             List<JsonConverter> clist = new List<JsonConverter>();
@@ -477,6 +418,64 @@ namespace Dispatcher.Messages
             settings.Converters = clist;
 
             return JsonConvert.SerializeObject(this, Formatting.None, settings);
+        }
+
+        // -----------------------------------------------------------------
+        /// <summary>
+        /// 
+        /// </summary>
+        // -----------------------------------------------------------------
+        private static RequestBase DeserializeFromReader(JsonReader reader)
+        {
+            List<JsonConverter> clist = new List<JsonConverter>();
+            clist.Add(new Vector3Converter());
+            clist.Add(new UUIDConverter());
+            clist.Add(new QuaternionConverter());
+        
+            TypeNameSerializationBinder binder = new TypeNameSerializationBinder("{0}");
+            JsonSerializerSettings settings = new JsonSerializerSettings();
+            settings.Binder = binder;
+            settings.TypeNameHandling = TypeNameHandling.Objects;
+            settings.Converters = clist;
+
+            JsonSerializer jsonSerializer = JsonSerializer.CreateDefault(settings);
+            object result = jsonSerializer.Deserialize(reader, null);
+            if (result == null)
+                return null;
+        
+            return ((RequestBase)result);
+        }
+
+        // -----------------------------------------------------------------
+        /// <summary>
+        /// 
+        /// </summary>
+        // -----------------------------------------------------------------
+        public static RequestBase DeserializeFromBinaryStream(Stream bstream)
+        {
+            BsonReader bson = new BsonReader(bstream);
+            return DeserializeFromReader(bson);
+        }
+
+        public static RequestBase DeserializeFromBinaryData(byte[] data)
+        {
+            MemoryStream ms = new MemoryStream(data);
+            BsonReader bson = new BsonReader(ms);
+            return DeserializeFromReader(bson);
+        }
+
+        public static RequestBase DeserializeFromTextStream(Stream tstream)
+        {
+            StreamReader text = new StreamReader(tstream);
+            JsonReader json = new JsonTextReader(text);
+            return DeserializeFromReader(json);
+        }
+
+        public static RequestBase DeserializeFromTextData(string source)
+        {
+            StringReader text = new StringReader(source);
+            JsonTextReader json = new JsonTextReader(text);
+            return DeserializeFromReader(json);
         }
     }
     

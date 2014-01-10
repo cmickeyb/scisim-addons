@@ -95,7 +95,6 @@ namespace Dispatcher
         private bool   m_enabled    = false;
 
         // these cover configurable properties
-        private string m_httpbinpath = "/DispatcherBinary/";
         private string m_httppath = "/Dispatcher/";
         private int m_udpport = 45325;
         private string m_host = "";
@@ -210,9 +209,9 @@ namespace Dispatcher
                 Watchdog.StartThread(AsynchronousListenLoop,"Dispatcher",ThreadPriority.Normal,false,true,null,4*m_socketTimeout);
 
                 // Add a handler to the HTTP server
-                MainServer.Instance.AddHTTPHandler(m_httppath,HandleSynchronousRequest);
+                // MainServer.Instance.AddHTTPHandler(m_httppath,HandleSynchronousRequest);
 
-                BSONStreamHandler handler = new BSONStreamHandler("POST", m_httpbinpath, HandleBSONRequest);
+                DispatcherStreamHandler handler = new DispatcherStreamHandler("POST", m_httppath, HandleStreamRequest);
                 MainServer.Instance.AddStreamHandler(handler);
 
                 // Start the timeout thread
@@ -629,44 +628,12 @@ namespace Dispatcher
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>
-        /// -----------------------------------------------------------------
-        private string InvokeSynchronousHandler(string path, string request)
-        {
-            ResponseBase resp = null;
-            try
-            {
-                RequestBase req = RequestBase.DeserializeFromString(request);
-                if (req == null)
-                {
-                    resp = OperationFailed("Failed to deserialize request");
-                    return resp.SerializeToString();
-                }
-                
-                // Check to see if this is an authentication request
-                // Get a complete domain and find the handler
-                if (String.IsNullOrEmpty(req._Domain))
-                    req._Domain = path;
-                
-                resp = InvokeHandler(req);
-            }
-            catch (Exception e)
-            {
-                resp = OperationFailed(String.Format("Fatal error; {0}",e.Message));
-            }
-
-            return resp.SerializeToString();
-        }
-
-
-        /// -----------------------------------------------------------------
-        /// <summary>
-        /// </summary>
         // -----------------------------------------------------------------
         private void InvokeAsynchronousHandler(string request)
         {
             try
             {
-                RequestBase req = RequestBase.DeserializeFromString(request);
+                RequestBase req = RequestBase.DeserializeFromTextData(request);
                 if (req == null)
                 {
                     OperationFailed("Failed to deserialize request");
@@ -689,10 +656,46 @@ namespace Dispatcher
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        public byte[] HandleBSONRequest(string path, Stream bstream, IOSHttpRequest request, IOSHttpResponse response)
+        private byte[] HandleTextRequest(string domain, Stream tstream, IOSHttpRequest request, IOSHttpResponse response)
+        {
+            response.ContentType = "application/json";
+            response.StatusCode = 200;
+            response.KeepAlive = false;
+            
+            ResponseBase resp = null;
+            try
+            {
+                RequestBase req = RequestBase.DeserializeFromTextStream(tstream);
+                if (req == null)
+                {
+                    resp = OperationFailed("Failed to deserialize request");
+                    return Encoding.UTF8.GetBytes(resp.SerializeToString());
+                }
+                
+                // Check to see if this is an authentication request
+                // Get a complete domain and find the handler
+                if (String.IsNullOrEmpty(req._Domain))
+                    req._Domain = domain;
+                
+                resp = InvokeHandler(req);
+            }
+            catch (Exception e)
+            {
+                resp = OperationFailed(String.Format("Fatal error; {0}",e.Message));
+            }
+
+            return Encoding.UTF8.GetBytes(resp.SerializeToString());
+        }
+        
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        private byte[] HandleBinaryRequest(string domain, Stream bstream, IOSHttpRequest request, IOSHttpResponse response)
         {
             response.ContentType = "application/bson";
             response.StatusCode = 200;
+            response.KeepAlive = false;
 
             ResponseBase resp = null;
             try
@@ -707,7 +710,7 @@ namespace Dispatcher
                 // Check to see if this is an authentication request
                 // Get a complete domain and find the handler
                 if (String.IsNullOrEmpty(req._Domain))
-                    req._Domain = path;
+                    req._Domain = domain;
                 
                 resp = InvokeHandler(req);
             }
@@ -723,27 +726,26 @@ namespace Dispatcher
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        private Hashtable HandleSynchronousRequest(Hashtable request)
+        public byte[] HandleStreamRequest(string path, Stream stream, IOSHttpRequest request, IOSHttpResponse response)
         {
-            string path = request["uri"].ToString();
-            path = path.Remove(0,m_httppath.Length);
+            string domain = path.Remove(0,m_httppath.Length);
+            m_log.DebugFormat("[Dispatcher] path={0}, domain={1}, content-type={2}",path,domain,request.ContentType);
 
-            string body = request["body"].ToString();
+            switch (request.ContentType)
+            {
+            case "application/bson" :
+                return HandleBinaryRequest(domain,stream,request,response);
+                
+            case "application/json" :
+            case "test/json" :
+                return HandleTextRequest(domain,stream,request,response);
 
-            m_log.DebugFormat("[Dispatcher] requested {0} at {1}",body,path);
-
-            Hashtable response = new Hashtable();
-            
-            response["int_response_code"] = 200;
-            response["content_type"] = "text/json";
-            response["keepalive"] = false;
-            response["str_response_string"] = InvokeSynchronousHandler(path, body);
-            
-            m_log.DebugFormat("[Dispatcher] returned {0}",response["str_response_string"]);
-            
-            return response;
+            default:
+                m_log.WarnFormat("[Dispatcher] request with unhandled content type; {0}", request.ContentType);
+                return null;
+            }
         }
-        
+
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>

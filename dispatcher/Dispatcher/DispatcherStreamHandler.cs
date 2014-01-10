@@ -56,13 +56,13 @@ using OpenSim.Services.Interfaces;
 
 namespace Dispatcher
 {
-    public delegate byte[] BSONHandler(string path, Stream request, IOSHttpRequest httpRequest, IOSHttpResponse httpResponse);
+    public delegate byte[] DispatcherHandler(string path, Stream request, IOSHttpRequest httpRequest, IOSHttpResponse httpResponse);
 
-    public class BSONStreamHandler : OpenSim.Framework.Servers.HttpServer.BaseStreamHandler
+    public class DispatcherStreamHandler : OpenSim.Framework.Servers.HttpServer.BaseStreamHandler
     {
-        BSONHandler m_handler;
+        DispatcherHandler m_handler;
         
-        public BSONStreamHandler(string method, string path, BSONHandler handler) : base(method, path, null, null)
+        public DispatcherStreamHandler(string method, string path, DispatcherHandler handler) : base(method, path, null, null)
         {
             m_handler = handler;
         }
