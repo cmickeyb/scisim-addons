@@ -373,7 +373,7 @@ namespace Dispatcher.Messages
         /// 
         /// </summary>
         // -----------------------------------------------------------------
-        public static RequestBase DeserializeFromBinaryData(byte[] data)
+        public static RequestBase DeserializeFromBinaryStream(Stream bstream)
         {
             List<JsonConverter> clist = new List<JsonConverter>();
             clist.Add(new Vector3Converter());
@@ -388,14 +388,19 @@ namespace Dispatcher.Messages
 
             JsonSerializer jsonSerializer = JsonSerializer.CreateDefault(settings);
 
-            MemoryStream ms = new MemoryStream(data);
-            BsonReader bson = new BsonReader(ms);
+            BsonReader bson = new BsonReader(bstream);
 
             object result = jsonSerializer.Deserialize(bson, null);
             if (result == null)
                 return null;
         
             return ((RequestBase)result);
+        }
+
+        public static RequestBase DeserializeFromBinaryData(byte[] data)
+        {
+            MemoryStream ms = new MemoryStream(data);
+            return DeserializeFromBinaryStream(ms);
         }
         
         // -----------------------------------------------------------------

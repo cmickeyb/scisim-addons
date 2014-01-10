@@ -42,7 +42,7 @@
 # goods and services.
 # -----------------------------------------------------------------
 
-import sys, os
+import sys, os, warnings
 import string
 
 import urllib2, socket
@@ -139,21 +139,29 @@ class OpenSimRemoteControl() :
 
             response = urllib2.urlopen(request)
         except urllib2.HTTPError as e:
-            print e.code
-            print e.read()
+            warnings.warn('[OpenSimRemoteControl] invocation failed with status code %d' % (e.code))
+            # print e.code
+            # print e.read()
             return json.loads('{"_Success" : 0, "_Message" : "connection failed"}');
         except urllib2.URLError as e:
-            print e.args
+            warnings.warn('[OpenSimRemoteControl] invalid URL; %s' % (e.args))
             return json.loads('{"_Success" : 0, "_Message" : "unknown connection error"}');
         except :
             return json.loads('{"_Success" : 0, "_Message" : "unknown error"}');
 
         try:
             data = response.read()
-            result = json.loads(data)
-        except TypeError :
-            print 'failed to parse response: ' + data
+            with open("out","w") as fp :
+                fp.write(data)
+
+            if self.Binary :
+                result = BSON(data).decode()
+            else :
+                result = json.loads(data)
+        except TypeError as detail:
+            warnings.warn('[OpenSimRemoteControl] failed to parse response; %s' % (detail))
             return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}');
+            
 
         # print json.dumps(result,sort_keys=True,indent=4)
         return result

@@ -52,6 +52,7 @@ using System.Timers;
 using System.Text;
 using System.Net;
 using System.Net.Sockets;
+using System.IO;
 
 using log4net;
 using Nini.Config;
@@ -211,7 +212,7 @@ namespace Dispatcher
                 // Add a handler to the HTTP server
                 MainServer.Instance.AddHTTPHandler(m_httppath,HandleSynchronousRequest);
 
-                BinaryStreamHandler handler = new BinaryStreamHandler("POST", m_httpbinpath, HandleSynchronousBinaryRequest);
+                BSONStreamHandler handler = new BSONStreamHandler("POST", m_httpbinpath, HandleBSONRequest);
                 MainServer.Instance.AddStreamHandler(handler);
 
                 // Start the timeout thread
@@ -688,9 +689,34 @@ namespace Dispatcher
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        public string HandleSynchronousBinaryRequest(byte[] data, string path, string param)
+        public byte[] HandleBSONRequest(string path, Stream bstream, IOSHttpRequest request, IOSHttpResponse response)
         {
-            return "";
+            response.ContentType = "application/bson";
+            response.StatusCode = 200;
+
+            ResponseBase resp = null;
+            try
+            {
+                RequestBase req = RequestBase.DeserializeFromBinaryStream(bstream);
+                if (req == null)
+                {
+                    resp = OperationFailed("Failed to deserialize request");
+                    return resp.SerializeToBinaryData();
+                }
+                
+                // Check to see if this is an authentication request
+                // Get a complete domain and find the handler
+                if (String.IsNullOrEmpty(req._Domain))
+                    req._Domain = path;
+                
+                resp = InvokeHandler(req);
+            }
+            catch (Exception e)
+            {
+                resp = OperationFailed(String.Format("Fatal error; {0}",e.Message));
+            }
+
+            return resp.SerializeToBinaryData();
         }
 
         /// -----------------------------------------------------------------
