@@ -45,7 +45,8 @@
 import sys, os, warnings
 import string
 
-import urllib2, socket
+import urllib3
+import socket
 import uuid
 import json
 import md5
@@ -109,6 +110,8 @@ class OpenSimRemoteControl() :
         self.Capability = uuid.UUID(int=0)
         self.Scene = ''
         self.DomainList = ['Dispatcher', 'RemoteControl', 'RemoteSensor']
+        
+        self.PoolManager = urllib3.PoolManager()
 
     # -----------------------------------------------------------------
     def _PostDebug(self, oparms):
@@ -125,10 +128,9 @@ class OpenSimRemoteControl() :
             datalen = len(data)
             headers = { 'Content-Type' : 'application/json', 'Content-Length' : datalen }
             
-        request = urllib2.Request(self.EndPoint,data,headers)
-
+        # request = urllib2.Request(self.EndPoint,data,headers)
         # print json.dumps(oparms,sort_keys=True)
-
+            
         try:
             self.MessagesSent += 1
             self.BytesSent += datalen
@@ -137,28 +139,37 @@ class OpenSimRemoteControl() :
                     fp.write(data)
                     fp.write("\n")
 
-            response = urllib2.urlopen(request)
-        except urllib2.HTTPError as e:
-            warnings.warn('[OpenSimRemoteControl] invocation failed with status code %d' % (e.code))
-            # print e.code
-            # print e.read()
-            return json.loads('{"_Success" : 0, "_Message" : "connection failed"}');
-        except urllib2.URLError as e:
-            warnings.warn('[OpenSimRemoteControl] invalid URL; %s' % (e.args))
-            return json.loads('{"_Success" : 0, "_Message" : "unknown connection error"}');
+            # response = urllib2.urlopen(request)
+            response = self.PoolManager.urlopen('POST', self.EndPoint, body=data, headers=headers)
+        except urllib3.HTTPError as detail:
+            warnings.warn('[OpenSimRemoteControl] invocation failed with status code %s' % (str(detail)))
+            return json.loads('{"_Success" : 0, "_Message" : "connection failed"}')
+        # except urllib2.URLError as e:
+        #     warnings.warn('[OpenSimRemoteControl] invalid URL; %s' % (e.args))
+        #     return json.loads('{"_Success" : 0, "_Message" : "unknown connection error"}');
         except :
-            return json.loads('{"_Success" : 0, "_Message" : "unknown error"}');
+            warnings.warn('[OpenSimRemoteControl] request failed; %s' %  (sys.exc_info()[0]))
+            return json.loads('{"_Success" : 0, "_Message" : "unknown error"}')
 
         try:
-            data = response.read()
+            # data = response.read()
+            data = response.data
             if self.Binary :
                 result = BSON(data).decode()
             else :
                 result = json.loads(data)
-        except TypeError as detail:
-            warnings.warn('[OpenSimRemoteControl] failed to parse response; %s' % (detail))
-            return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}');
-            
+        # except ValueError as detail:
+        #     warnings.warn("[OpenSimRemoteControl] Error parsing response; value error %s" % (str(detail)))
+        #     return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}')
+        # except NameError as detail: 
+        #     warnings.warn("[OpenSImRemoteControl] Error parsing response; value error %s" % (str(detail)))
+        #     return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}')
+        # except TypeError as detail:
+        #     warnings.warn('[OpenSimRemoteControl] failed to parse response; %s' % (detail))
+        #     return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}')
+        except :
+            warnings.warn('[OpenSimRemoteControl] failed to parse response; %s' % (sys.exc_info()[0]))
+            return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}')
 
         # print json.dumps(result,sort_keys=True,indent=4)
         return result

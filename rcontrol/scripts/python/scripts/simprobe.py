@@ -42,7 +42,7 @@
 # goods and services.
 # -----------------------------------------------------------------
 
-import sys, os
+import sys, os, warnings
 sys.path.append(os.path.join(os.environ.get("OPENSIM","/share/opensim"),"lib","python"))
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "lib")))
@@ -79,7 +79,15 @@ def DumpMessageInfo(rc, message) :
     sys.exit(0)
 
 # -----------------------------------------------------------------
+# -----------------------------------------------------------------
+def HandleWarnings(message, category, filename, lineno, file=None) :
+    mformat = 'WARNING: {0}\n'
+    sys.stderr.write(mformat.format(message))
+
+# -----------------------------------------------------------------
 def main() :
+    warnings.showwarning = HandleWarnings
+
     endpoint = os.environ.get('OS_REMOTECONTROL_URL')
     eprequired = not endpoint
 
