@@ -129,6 +129,11 @@ namespace Dispatcher
         
         private Dictionary<UUID,EndPoint> m_endpointRegistry = new Dictionary<UUID,EndPoint>();
 
+        private Int64 m_totaltime = 0;
+        private Int64 m_totalreqs = 0;
+        private object m_totallock = new object();
+        
+
         private System.Timers.Timer m_endpointTimer;
         
 #region IRegionModule Members
@@ -572,6 +577,25 @@ namespace Dispatcher
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
+        private void RecordCompletedOperation(RequestBase req)
+        {
+            lock (m_totallock)
+            {
+                m_totalreqs++;
+                m_totaltime += Util.EnvironmentTickCountSubtract(req.RequestEntryTime);
+                if (this.m_totalreqs % 100 == 0)
+                {
+                    m_log.WarnFormat("[Dispatcher] {0} requests, avg resp last 100 {1}, async queue {2}",
+                                     m_totalreqs, m_totaltime / 100.0, m_requestQueue.Count);
+                    m_totaltime = 0;
+                }
+            }
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        /// -----------------------------------------------------------------
         private void ProcessRequestQueue()
         {
             while (true)
@@ -591,6 +615,8 @@ namespace Dispatcher
                 OperationHandler handler;
                 if (FindHandler(req, out handler))
                     handler(req);
+
+                RecordCompletedOperation(req);
             }
         }
         
@@ -622,7 +648,10 @@ namespace Dispatcher
                 return new ResponseBase(ResponseCode.Queued,"");
             }
 
-            return handler(req);
+            ResponseBase resp = handler(req);
+            RecordCompletedOperation(req);
+            
+            return resp;
         }
         
         /// -----------------------------------------------------------------
@@ -660,7 +689,7 @@ namespace Dispatcher
         {
             response.ContentType = "application/json";
             response.StatusCode = 200;
-            response.KeepAlive = false;
+            response.KeepAlive = true;
             
             ResponseBase resp = null;
             try
@@ -695,7 +724,7 @@ namespace Dispatcher
         {
             response.ContentType = "application/bson";
             response.StatusCode = 200;
-            response.KeepAlive = false;
+            response.KeepAlive = true;
 
             ResponseBase resp = null;
             try

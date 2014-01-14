@@ -484,6 +484,8 @@ namespace Dispatcher.Messages
     [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
     public class RequestBase : MessageBase
     {
+        public Int32 RequestEntryTime { get; set; }
+
         [JsonProperty]
         public string _Scene { get; set; }
 
@@ -506,6 +508,8 @@ namespace Dispatcher.Messages
         // -----------------------------------------------------------------
         public RequestBase()
         {
+            RequestEntryTime = Util.EnvironmentTickCount();
+
             _Scene = "";
             _Domain = "";
             _UserAccount = null;
