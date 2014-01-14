@@ -135,29 +135,42 @@ class OpenSimRemoteControl() :
             self.MessagesSent += 1
             self.BytesSent += datalen
             if self.LogFile :
-                with open(self.LogFile,"a") as fp :
+                with open(self.LogFile, "a") as fp :
+                    fp.write("REQUEST >>>>\n")
                     fp.write(data)
-                    fp.write("\n")
+                    fp.write("<<<<\n")
 
             # response = urllib2.urlopen(request)
             response = self.PoolManager.urlopen('POST', self.EndPoint, body=data, headers=headers)
-        except urllib3.HTTPError as detail:
-            warnings.warn('[OpenSimRemoteControl] invocation failed with status code %s' % (str(detail)))
-            return json.loads('{"_Success" : 0, "_Message" : "connection failed"}')
+        # except urllib3.HTTPError as detail:
+        #     warnings.warn('[OpenSimRemoteControl] invocation failed with status code %s' % (str(detail)))
+        #     return json.loads('{"_Success" : 0, "_Message" : "connection failed"}')
         # except urllib2.URLError as e:
         #     warnings.warn('[OpenSimRemoteControl] invalid URL; %s' % (e.args))
         #     return json.loads('{"_Success" : 0, "_Message" : "unknown connection error"}');
         except :
-            warnings.warn('[OpenSimRemoteControl] request failed; %s' %  (sys.exc_info()[0]))
+            exctype, value =  sys.exc_info()[:2]
+            warnings.warn('[OpenSimRemoteControl] request failed with exception type %s; %s' %  (exctype, str(value)))
             return json.loads('{"_Success" : 0, "_Message" : "unknown error"}')
 
         try:
             # data = response.read()
             data = response.data
-            if self.Binary :
+            if self.LogFile :
+                with open(self.LogFile, "a") as fp :
+                    fp.write("RESPONSE >>>>\n")
+                    fp.write(data)
+                    fp.write("<<<<\n")
+
+            ctype = response.headers['content-type']
+            if ctype == 'application/bson' :
                 result = BSON(data).decode()
-            else :
+            elif ctype == 'application/json' or ctype == 'text/json' :
                 result = json.loads(data)
+            else :
+                warnings.warn('[OpenSimRemoteControl] unknown response type; %s' % (ctype))
+                return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}')
+                
         # except ValueError as detail:
         #     warnings.warn("[OpenSimRemoteControl] Error parsing response; value error %s" % (str(detail)))
         #     return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}')
@@ -168,7 +181,8 @@ class OpenSimRemoteControl() :
         #     warnings.warn('[OpenSimRemoteControl] failed to parse response; %s' % (detail))
         #     return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}')
         except :
-            warnings.warn('[OpenSimRemoteControl] failed to parse response; %s' % (sys.exc_info()[0]))
+            exctype, value =  sys.exc_info()[:2]
+            warnings.warn('[OpenSimRemoteControl] failed to parse response with exception %s; %s' % (exctype, str(value)))
             return json.loads('{"_Success" : 0, "_Message" : "failed to parse response"}')
 
         # print json.dumps(result,sort_keys=True,indent=4)
