@@ -33,5 +33,6 @@
     <Reference name="OpenMetaverse.dll" localCopy="false"/>
     <Files>
       <Match pattern="*.cs" recurse="true"/>
+      <Match pattern="*.ini.example" buildAction="Copy" destination="../../../bin/config/" />
     </Files>
   </Project>

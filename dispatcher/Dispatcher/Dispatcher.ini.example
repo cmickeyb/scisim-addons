@@ -1,0 +1,35 @@
+;; --------------------------------------------------
+[Dispatcher]
+Enabled = True
+
+;; Set the address to use in the binding string for
+;; the UDP binding
+HostAddress = 127.0.0.1
+
+;; Set the UDP port used for asynchronous invocations.
+;; The async path endpoint will be {HostAddress}:{UDPPort}
+UDPPort = 23997
+
+;; The HTTPPath is the path used to register the 
+;; dispatcher with the simulator's http server.
+;; The synchronous path will be http://{SimulatorAddress}/{HTTPPath}
+HTTPPath = "/Dispatcher"
+
+;; The maximum number of threads that can be used to process
+;; async requests. The thread pool will shrink when not in
+;; use and will not grow larger than MaxAsyncThreads
+MaxAsyncThreads = 2
+
+;; The number of seconds to keep a callback connection open
+;; without activity
+MaxInterPingTime = 3000
+
+;; Specify whether invocation should require an authenticated and
+;; valid capability before execution. Turning this off should only
+;; happen in physically isolated networks.
+UseAuthentication = True
+
+;; Specify the maximum lifespan of a capability in seconds. The capability
+;; can be created or renewed with a maximum life span.
+MaxLifeSpan = 3000
+
