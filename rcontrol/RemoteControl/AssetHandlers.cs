@@ -248,8 +248,9 @@ namespace RemoteControl.Handlers
                 return OperationFailed("no such asset");
 
             UuidGatherer gatherer = new UuidGatherer(m_scene.AssetService);
-            Dictionary<UUID,AssetType> assetids = new Dictionary<UUID,AssetType>();
-            gatherer.GatherAssetUuids(request.AssetID, (AssetType)asset.Type, assetids);
+            Dictionary<UUID,sbyte> assetids = new Dictionary<UUID,sbyte>();
+            //gatherer.GatherAssetUuids(request.AssetID, (AssetType)asset.Type, assetids);
+            gatherer.GatherAssetUuids(request.AssetID, (sbyte)asset.Type, assetids);
             
             List<UUID> assets = new List<UUID>(assetids.Keys);
             return new GetDependentAssetsResponse(assets);
