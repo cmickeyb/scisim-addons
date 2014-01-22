@@ -278,6 +278,9 @@ namespace RemoteControl.Handlers
                 if (sog == null)
                     return OperationFailed("unable to create object from asset");
 
+                if (request.ObjectID != UUID.Zero)
+                    sog.UUID = request.ObjectID;
+                
                 if (! String.IsNullOrEmpty(request.StartParameter))
                 {
                     if (m_jsonstore != null)

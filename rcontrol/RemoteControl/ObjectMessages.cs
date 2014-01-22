@@ -440,6 +440,9 @@ namespace RemoteControl.Messages
         [JsonProperty]
         public UUID AssetID { get; set; }
 
+        [JsonProperty]
+        public UUID ObjectID { get; set; }
+
         public CreateObjectRequest()
         {
             Name = "RemoteControl Object";
@@ -449,6 +452,7 @@ namespace RemoteControl.Messages
             Rotation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
             Velocity = new Vector3(0.0f, 0.0f, 0.0f);
             AssetID = UUID.Zero;
+            ObjectID = UUID.Zero;
         }
     }
 

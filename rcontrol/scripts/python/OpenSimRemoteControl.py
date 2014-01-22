@@ -343,7 +343,7 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: CreateObject
     # -----------------------------------------------------------------
-    def CreateObject(self, asset, pos = None, rot = None, vel = None, name = None, desc = None, parm = "{}") :
+    def CreateObject(self, asset, pos = None, rot = None, vel = None, name = None, desc = None, objectid = None, parm = "{}") :
         parms = Parameters(self,'RemoteControl','RemoteControl.Messages.CreateObjectRequest')
         parms['AssetID'] = str(asset)
 
@@ -356,6 +356,10 @@ class OpenSimRemoteControl() :
         parms['Rotation'] = rot if rot else [0.0, 0.0, 0.0, 1.0]
         parms['Velocity'] = vel if vel else [0.0, 0.0, 0.0]
         parms['StartParameter'] = parm
+
+        # don't even send this if it isn't set
+        if objectid :
+            parms['ObjectID'] = str(objectid)
 
         return self._PostRequest(parms)
 
