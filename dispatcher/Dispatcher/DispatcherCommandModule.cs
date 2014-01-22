@@ -68,24 +68,48 @@ namespace Dispatcher
             m_sceneCache.Add(scene.Name,scene);
         }
         
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
         public void RemoveScene(Scene scene)
         {
             m_sceneCache.Remove(scene.Name);
         }
-        
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
         public void RegionsLoaded()
         {
             MainConsole.Instance.Commands.AddCommand("Dispatcher", false, "dispatcher stats", "dispatcher stats",
-                                                     "Display statistics about the state of the Dispatcher module",
+                                                     "Display statistics about the state of the dispatcher",
                                                      CmdStats);
+
+            MainConsole.Instance.Commands.AddCommand("Dispatcher", false, "dispatcher binding", "dispatcher binding",
+                                                     "Display synchronous and asynchronous bindings for the dispatcher",
+                                                     CmdBindings);
         }
 
 #endregion
 
 #region Commands
 
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
         private void CmdStats(string module, string[] cmd)
         {
+            if (cmd.Length == 3 && cmd[2] == "reset")
+            {
+                m_dispatcher.ResetStats();
+                MainConsole.Instance.OutputFormat("Dispatcher stats reset");
+                return;
+            }
+            
+
             foreach (KeyValuePair<String,DispatcherStat> kvp in m_dispatcher.DispatcherStats)
             {
                 UInt64 tr = kvp.Value.TotalRequests;
@@ -96,6 +120,16 @@ namespace Dispatcher
             }
             
             MainConsole.Instance.OutputFormat("Current async queue depth {0}", m_dispatcher.RequestQueue.Count);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        private void CmdBindings(string module, string[] cmd)
+        {
+            MainConsole.Instance.OutputFormat("Asynchronous Binding: {0}", m_dispatcher.AsyncBinding);
+            MainConsole.Instance.OutputFormat("Synchronous Binding:  {0}", m_dispatcher.SyncBinding);
         }
 
 #endregion

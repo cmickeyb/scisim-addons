@@ -315,6 +315,16 @@ namespace Dispatcher
 #endregion
 
 #region IDispatchModule
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public void ResetStats()
+        {
+            m_dispatcherStats = new Dictionary<String,DispatcherStat>();
+        }
+
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>
