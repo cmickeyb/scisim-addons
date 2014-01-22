@@ -80,6 +80,18 @@ using Dispatcher.Handlers;
 
 namespace Dispatcher
 {
+    public class DispatcherStat
+    {
+        public UInt64 TotalRequests;
+        public UInt64 TotalTime;
+
+        public DispatcherStat()
+        {
+            TotalRequests = 0;
+            TotalTime = 0;
+        }
+    }
+
     [Extension(Path = "/OpenSim/RegionModules", NodeName = "RegionModule")]
 
     public class DispatcherModule  : ISharedRegionModule, IDispatcherModule
@@ -112,6 +124,8 @@ namespace Dispatcher
         public int MaxInterPingTime { get { return m_maxInterPingTime; } }
 
         private Queue<RequestBase> m_requestQueue = new Queue<RequestBase>();
+        public Queue<RequestBase> RequestQueue { get { return m_requestQueue; } }
+
         private int m_requestThreads = 0;
         private int m_maxRequestThreads = 2;
 
@@ -126,13 +140,12 @@ namespace Dispatcher
         private AuthHandlers m_authorizer = null;
         private InfoHandlers m_infohandler = null;
         private EndPointHandlers m_endpointhandler = null;
+        private DispatcherCommandModule m_commands = null;
         
         private Dictionary<UUID,EndPoint> m_endpointRegistry = new Dictionary<UUID,EndPoint>();
 
-        private Int64 m_totaltime = 0;
-        private Int64 m_totalreqs = 0;
-        private object m_totallock = new object();
-        
+        private Dictionary<String,DispatcherStat> m_dispatcherStats = new Dictionary<String,DispatcherStat>();
+        public Dictionary<String,DispatcherStat> DispatcherStats { get { return m_dispatcherStats; } }
 
         private System.Timers.Timer m_endpointTimer;
         
@@ -189,6 +202,8 @@ namespace Dispatcher
                     m_authorizer = new AuthHandlers(m_config,this);
                     m_infohandler = new InfoHandlers(m_config,this);
                     m_endpointhandler = new EndPointHandlers(m_config,this);
+
+                    m_commands = new DispatcherCommandModule(m_config,this);
                 }
             }
             catch (Exception e)
@@ -210,6 +225,8 @@ namespace Dispatcher
         {
             if (m_enabled)
             {
+                m_commands.RegionsLoaded();
+
                 // Start the listener thread here
                 Watchdog.StartThread(AsynchronousListenLoop,"Dispatcher",ThreadPriority.Normal,false,true,null,4*m_socketTimeout);
 
@@ -250,6 +267,8 @@ namespace Dispatcher
                 m_infohandler.AddScene(scene);
                 m_endpointhandler.AddScene(scene);
                 
+                m_commands.AddScene(scene);
+                
                 scene.RegisterModuleInterface<IDispatcherModule>(this);
             }
         }
@@ -267,6 +286,8 @@ namespace Dispatcher
                 m_authorizer.RemoveScene(scene);
                 m_infohandler.RemoveScene(scene);
                 m_endpointhandler.RemoveScene(scene);
+
+                m_commands.RemoveScene(scene);
 
                 scene.UnregisterModuleInterface<IDispatcherModule>(this);
             }
@@ -579,16 +600,20 @@ namespace Dispatcher
         /// -----------------------------------------------------------------
         private void RecordCompletedOperation(RequestBase req)
         {
-            lock (m_totallock)
+            lock (m_dispatcherStats)
             {
-                m_totalreqs++;
-                m_totaltime += Util.EnvironmentTickCountSubtract(req.RequestEntryTime);
-                if (this.m_totalreqs % 100 == 0)
+                String tname = req.GetType().Name;
+                DispatcherStat stat = null;
+                
+                if (! m_dispatcherStats.TryGetValue(tname, out stat))
                 {
-                    m_log.WarnFormat("[Dispatcher] {0} requests, avg resp last 100 {1}, async queue {2}",
-                                     m_totalreqs, m_totaltime / 100.0, m_requestQueue.Count);
-                    m_totaltime = 0;
+                    stat = new DispatcherStat();
+                    m_dispatcherStats[tname] = stat;
                 }
+                
+                UInt64 tdiff = (UInt64)Util.EnvironmentTickCountSubtract(req.RequestEntryTime);
+                stat.TotalTime += tdiff;
+                stat.TotalRequests++;
             }
         }
 
