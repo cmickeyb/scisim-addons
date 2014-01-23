@@ -721,14 +721,15 @@ sub _PostRequest()
 
     my $content = to_json($params,{canonical => 1});
 
-    ## print STDERR "CONTENT: $content\n";
-    ## print STDERR "URL: " . $self->{URL} . "\n";
+    # print STDERR "CONTENT: $content\n";
+    # print STDERR "URL: " . $self->{URL} . "\n";
 
     my $request = HTTP::Request->new;
     $request->method('POST');
     $request->uri($self->{URL});
     $request->header('Content-Type' => 'application/json');
     $request->header('Content-Length' => length $content);
+    $request->header('Connection' => 'keep-alive');
     $request->content($content);
 
     my $result = $self->{_ua}->request($request);
@@ -737,7 +738,7 @@ sub _PostRequest()
         croak "Message transmission failed; " . $result->status_line . "\n";
     }
 
-    ## print STDERR "RESULT: " . $result->content . "\n";
+    # print STDERR "RESULT: " . $result->content . "\n";
 
     my $results;
     eval { $results = decode_json($result->content); };
