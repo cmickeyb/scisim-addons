@@ -390,6 +390,15 @@ class OpenSimRemoteControl() :
         return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
+    # NAME: GetObjectInventory
+    # -----------------------------------------------------------------
+    def GetObjectInventory(self, objectid) :
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectInventoryRequest')
+        parms['ObjectID'] = str(objectid)
+
+        return self._PostRequest(parms)
+
+    # -----------------------------------------------------------------
     # NAME: GetObjectData
     # -----------------------------------------------------------------
     def GetObjectData(self, objectid) :

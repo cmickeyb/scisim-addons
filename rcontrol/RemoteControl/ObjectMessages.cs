@@ -160,7 +160,7 @@ namespace RemoteControl.Messages
 
         public GetObjectPartsRequest()
         {
-                    ObjectID = UUID.Zero;
+            ObjectID = UUID.Zero;
         }
     }
 
@@ -222,6 +222,67 @@ namespace RemoteControl.Messages
             Position = sog.AbsolutePosition;
             Rotation = sog.GroupRotation;
             OwnerID = sog.OwnerID;
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // ObjectInventory Messages
+    // -----------------------------------------------------------------
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class ObjectInventoryInformation
+    {
+        [JsonProperty]
+        public string Name { get; set; }
+        
+        [JsonProperty]
+        public string Description { get; set; }
+        
+        [JsonProperty]
+        public UUID AssetID { get; set; }
+
+        [JsonProperty]
+        public Int32 ItemType { get; set; }
+
+        public ObjectInventoryInformation(TaskInventoryItem item)
+        {
+            Name = item.Name;
+            AssetID = item.AssetID;
+            Description = item.Description;
+            ItemType = item.Type;
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetObjectInventoryRequest : Dispatcher.Messages.RequestBase
+    {
+        [JsonProperty]
+        public UUID ObjectID { get; set; }
+
+        public GetObjectInventoryRequest()
+        {
+            ObjectID = UUID.Zero;
+        }
+    }
+
+    /// <summary>
+    ///    
+    /// </summary>
+    [JsonObject(MemberSerialization=MemberSerialization.OptIn)]
+    public class GetObjectInventoryResponse : Dispatcher.Messages.ResponseBase
+    {
+        [JsonProperty]
+        public List<ObjectInventoryInformation> Inventory { get; set; }
+
+        public GetObjectInventoryResponse() : base(ResponseCode.Success,"")
+        {
+            Inventory = new List<ObjectInventoryInformation>();
         }
     }
 

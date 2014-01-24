@@ -100,6 +100,7 @@ namespace RemoteControl.Handlers
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(FindObjectsRequest));
 
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectDataRequest));
+            m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectInventoryRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectPositionRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(SetObjectPositionRequest));
             m_dispatcher.UnregisterOperationHandler(m_scene,m_domain,typeof(GetObjectRotationRequest));
@@ -127,6 +128,7 @@ namespace RemoteControl.Handlers
             m_dispatcher.RegisterMessageType(typeof(FindObjectsResponse));
             m_dispatcher.RegisterMessageType(typeof(GetObjectPartsResponse));
             m_dispatcher.RegisterMessageType(typeof(GetObjectDataResponse));
+            m_dispatcher.RegisterMessageType(typeof(GetObjectInventoryResponse));
             m_dispatcher.RegisterMessageType(typeof(ObjectPositionResponse));
             m_dispatcher.RegisterMessageType(typeof(ObjectRotationResponse));
             m_dispatcher.RegisterMessageType(typeof(CreateObjectResponse));
@@ -134,6 +136,7 @@ namespace RemoteControl.Handlers
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(FindObjectsRequest),FindObjectsHandler);
 
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectDataRequest),GetObjectDataHandler);
+            m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectInventoryRequest),GetObjectInventoryHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectPositionRequest),GetObjectPositionHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(SetObjectPositionRequest),SetObjectPositionHandler);
             m_dispatcher.RegisterOperationHandler(m_scene,m_domain,typeof(GetObjectRotationRequest),GetObjectRotationHandler);
@@ -347,6 +350,34 @@ namespace RemoteControl.Handlers
                 return OperationFailed("no such object");
 
             return new GetObjectDataResponse(sog);
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
+        public Dispatcher.Messages.ResponseBase GetObjectInventoryHandler(Dispatcher.Messages.RequestBase irequest)
+        {
+            if (irequest.GetType() != typeof(GetObjectInventoryRequest))
+                return OperationFailed("wrong type");
+
+            GetObjectInventoryRequest request = (GetObjectInventoryRequest)irequest;
+
+            SceneObjectGroup sog = m_scene.GetSceneObjectGroup(request.ObjectID);
+            if (sog == null)
+                return OperationFailed("no such object");
+
+            GetObjectInventoryResponse response = new GetObjectInventoryResponse();
+            lock (sog.RootPart.TaskInventory)
+            {
+                foreach (KeyValuePair<UUID, TaskInventoryItem> inv in sog.RootPart.TaskInventory)
+                {
+                    ObjectInventoryInformation item = new ObjectInventoryInformation(inv.Value);
+                    response.Inventory.Add(item);
+                }
+            }
+
+            return response;
         }
         
         /// -----------------------------------------------------------------

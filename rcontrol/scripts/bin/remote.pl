@@ -421,7 +421,7 @@ sub cFINDOBJECTS
         my $details = $gRemoteControl->GetObjectData($obj);
         if ($details->{_Success} > 0)
         {
-            printf("%s\t%s\t<%03.2f,%03.2f,%03.2f>\n",$details->{Name},$details->{OwnerID},@{$details->{Position}});
+            printf("%s\t%s\t%s\t<%03.2f,%03.2f,%03.2f>\n",$details->{Name},$obj,$details->{OwnerID},@{$details->{Position}});
         }
     }
 }
@@ -532,9 +532,18 @@ sub cDUMPOBJECT
     $gCmdinfo->DumpCommands('dump','missing required parameters; objectid') unless defined $gObjectID;
 
     &CheckGlobals('dump');
+
     $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
     
     my $result = $gRemoteControl->GetObjectParts($gObjectID);
+    if ($result->{_Success} <= 0)
+    {
+        print STDERR "Operation failed; " . $result->{_Message} . "\n";
+    }
+
+    print STDERR to_json($result,{pretty => 1}) . "\n";
+
+    $result = $gRemoteControl->GetObjectInventory($gObjectID);
     if ($result->{_Success} <= 0)
     {
         print STDERR "Operation failed; " . $result->{_Message} . "\n";

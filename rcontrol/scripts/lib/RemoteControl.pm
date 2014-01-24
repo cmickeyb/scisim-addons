@@ -358,6 +358,20 @@ sub GetObjectParts
 }
 
 # -----------------------------------------------------------------
+# NAME: GetObjectInventory
+# -----------------------------------------------------------------
+sub GetObjectInventory
+{
+    my $self = shift;
+    my ($object) = @_;
+
+    my $params = {};
+    $params->{'ObjectID'} = $object;
+
+    return $self->_PostRequest('RemoteControl','RemoteControl.Messages.GetObjectInventoryRequest',$params);
+}
+
+# -----------------------------------------------------------------
 # NAME: GetObjectData
 # -----------------------------------------------------------------
 sub GetObjectData

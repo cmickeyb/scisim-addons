@@ -32,6 +32,7 @@
     <Reference name="OpenMetaverse.StructuredData" localCopy="false"/>
     <Reference name="OpenMetaverse.dll" localCopy="false"/>
     <Reference name="DispatcherModule.dll" localCopy="false" />
+    <Reference name="System.Xml" localCopy="false" />
     <Files>
       <Match pattern="*.cs" recurse="true"/>
       <Match pattern="*.ini.example" buildAction="Copy" destination="../../../bin/config/" />
