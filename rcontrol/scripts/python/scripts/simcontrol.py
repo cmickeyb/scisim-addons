@@ -76,11 +76,12 @@ def cmdDELETE(rc, cmdargs) :
         print 'Failed: ' + response['_Message']
         sys.exit(-1)
 
+    count = len(response['Objects'])
     for obj in response['Objects'] :
         # print 'deleting %s' % obj
         response = rc.DeleteObject(obj, async=True)
 
-    print 'Deleted %d objects' % len(response['Objects'])
+    print 'Deleted %d objects' % count
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
