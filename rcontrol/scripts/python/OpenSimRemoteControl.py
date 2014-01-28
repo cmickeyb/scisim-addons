@@ -55,11 +55,11 @@ from bson import BSON, SON
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 class Parameters(SON) :
-    def __init__(self, oscontrol, domain, operation) :
+    def __init__(self, oscontrol, domain, operation, async) :
         SON.__init__(self)
         self['$type'] = operation
         self['_domain'] = domain
-        self['_asyncrequest'] = (oscontrol.RequestType == 'async')
+        self['_asyncrequest'] = async
 
         if oscontrol.Capability and oscontrol.Capability.int != 0 :
             self['_capability'] = str(oscontrol.Capability)
@@ -98,9 +98,9 @@ class BulkUpdateItem() :
 class OpenSimRemoteControl() :
 
     # -----------------------------------------------------------------
-    def __init__(self, endpoint, request = 'sync', logfile = None):
+    def __init__(self, endpoint, async = False, logfile = None):
         self.EndPoint = endpoint
-        self.RequestType = request
+        self.AsyncRequest = async
         self.MessagesSent = 0
         self.BytesSent = 0
         self.LogFile = logfile
@@ -195,11 +195,12 @@ class OpenSimRemoteControl() :
     # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
     # -----------------------------------------------------------------
-    def AuthenticateAvatarByUUID(self, uuid, passwd, lifespan = 3600) :
+    def AuthenticateAvatarByUUID(self, uuid, passwd, lifespan = 3600, async = None) :
         m = md5.new()
         m.update(passwd)
 
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest')
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest', async)
         parms['hashedpasswd'] = '$1$' + m.hexdigest()
         parms['userid'] = str(uuid)
         parms['lifespan'] = lifespan
@@ -208,13 +209,14 @@ class OpenSimRemoteControl() :
         return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
-    def AuthenticateAvatarByName(self, name, passwd, lifespan = 3600) :
+    def AuthenticateAvatarByName(self, name, passwd, lifespan = 3600, async = None) :
         m = md5.new()
         m.update(passwd)
 
         names = name.split(' ',2)
 
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest')
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest', async)
         parms['hashedpasswd'] = '$1$' + m.hexdigest()
         parms['firstname'] = names[0]
         parms['lastname'] = names[1]
@@ -224,11 +226,12 @@ class OpenSimRemoteControl() :
         return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
-    def AuthenticateAvatarByEmail(self, email, passwd, lifespan = 3600) :
+    def AuthenticateAvatarByEmail(self, email, passwd, lifespan = 3600, async = None) :
         m = md5.new()
         m.update(passwd)
 
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest')
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest', async)
         parms['hashedpasswd'] = '$1$' + m.hexdigest()
         parms['emailaddress'] = email
         parms['lifespan'] = lifespan
@@ -238,22 +241,25 @@ class OpenSimRemoteControl() :
 
 
     # -----------------------------------------------------------------
-    def RenewCapability(self, lifespan) :
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.RenewCapabilityRequest')
+    def RenewCapability(self, lifespan, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.RenewCapabilityRequest', async)
         parms['lifespan'] = lifespan
         parms['domainlist'] = self.DomainList
 
         return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
-    def Info(self) :
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.InfoRequest')
+    def Info(self, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.InfoRequest', async)
 
         return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
-    def MessageFormatRequest(self, message) :
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.MessageFormatRequest')
+    def MessageFormatRequest(self, message, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.MessageFormatRequest', async)
         parms['MessageName'] = message
         
         return self._PostRequest(parms)
@@ -261,8 +267,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: CreateEndPoint
     # -----------------------------------------------------------------
-    def CreateEndPoint(self, host, port, life) :
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateEndPointRequest')
+    def CreateEndPoint(self, host, port, life, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateEndPointRequest', async)
         parms['CallbackHost'] = host
         parms['CallbackPort'] = port
         if life :
@@ -273,8 +280,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: RenewEndPoint
     # -----------------------------------------------------------------
-    def RenewEndPoint(self, endpointid, life) :
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.RenewEndPointRequest')
+    def RenewEndPoint(self, endpointid, life, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.RenewEndPointRequest', async)
         parms['EndPointID'] = str(endpointid)
         if life :
             parms['LifeSpan'] = life
@@ -284,8 +292,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: CloseEndPoint
     # -----------------------------------------------------------------
-    def CloseEndPoint(self, endpointid) :
-        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CloseEndPointRequest')
+    def CloseEndPoint(self, endpointid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CloseEndPointRequest', async)
         parms['EndPointID'] = str(endpointid)
 
         return self._PostRequest(parms)
@@ -293,8 +302,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SendChatMessage
     # -----------------------------------------------------------------
-    def SendChatMessage(self, msg, pos) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.ChatRequest')
+    def SendChatMessage(self, msg, pos, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.ChatRequest', async)
         parms['Message'] = msg
         parms['Position'] = pos
 
@@ -303,8 +313,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: GetAvatarAppearance
     # -----------------------------------------------------------------
-    def GetAvatarAppearance(self, avatarid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAvatarAppearanceRequest')
+    def GetAvatarAppearance(self, avatarid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAvatarAppearanceRequest', async)
         parms['AvatarID'] = str(avatarid)
 
         return self._PostRequest(parms)
@@ -312,8 +323,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SetAvatarAppearance
     # -----------------------------------------------------------------
-    def SetAvatarAppearance(self, appearance, avatarid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetAvatarAppearanceRequest')
+    def SetAvatarAppearance(self, appearance, avatarid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetAvatarAppearanceRequest', async)
 
         # Serialized appearance
         parms['SerializedAppearance'] = appearance 
@@ -324,8 +336,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: FindObjects
     # -----------------------------------------------------------------
-    def FindObjects(self, coord1 = None, coord2 = None, pattern = None, owner = None) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.FindObjectsRequest')
+    def FindObjects(self, coord1 = None, coord2 = None, pattern = None, owner = None, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.FindObjectsRequest', async)
         if coord1 :
             parms['CoordinateA'] = coord1
 
@@ -343,8 +356,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: CreateObject
     # -----------------------------------------------------------------
-    def CreateObject(self, asset, pos = None, rot = None, vel = None, name = None, desc = None, objectid = None, parm = "{}") :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.CreateObjectRequest')
+    def CreateObject(self, asset, pos = None, rot = None, vel = None, name = None, desc = None, objectid = None, parm = "{}", async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.CreateObjectRequest', async)
         parms['AssetID'] = str(asset)
 
         if name :
@@ -366,8 +380,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: DeleteObject
     # -----------------------------------------------------------------
-    def DeleteObject(self, objectid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.DeleteObjectRequest')
+    def DeleteObject(self, objectid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.DeleteObjectRequest', async)
         parms['ObjectID'] = str(objectid)
 
         return self._PostRequest(parms)
@@ -375,16 +390,18 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: DeleteAllObject
     # -----------------------------------------------------------------
-    def DeleteAllObjects(self) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.DeleteAllObjectsRequest')
+    def DeleteAllObjects(self, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.DeleteAllObjectsRequest', async)
 
         return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: GetObjectParts
     # -----------------------------------------------------------------
-    def GetObjectParts(self, objectid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectPartsRequest')
+    def GetObjectParts(self, objectid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectPartsRequest', async)
         parms['ObjectID'] = str(objectid)
 
         return self._PostRequest(parms)
@@ -392,8 +409,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: GetObjectInventory
     # -----------------------------------------------------------------
-    def GetObjectInventory(self, objectid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectInventoryRequest')
+    def GetObjectInventory(self, objectid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectInventoryRequest', async)
         parms['ObjectID'] = str(objectid)
 
         return self._PostRequest(parms)
@@ -401,8 +419,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: GetObjectData
     # -----------------------------------------------------------------
-    def GetObjectData(self, objectid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectDataRequest')
+    def GetObjectData(self, objectid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectDataRequest', async)
         parms['ObjectID'] = str(objectid)
 
         return self._PostRequest(parms)
@@ -411,8 +430,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: BulkDynamics
     # -----------------------------------------------------------------
-    def BulkDynamics(self, updates) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.BulkDynamicsRequest')
+    def BulkDynamics(self, updates, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.BulkDynamicsRequest', async)
         parms['Updates'] = []
         for update in updates :
             parms['Updates'].append(update.ConvertForEncoding())
@@ -422,8 +442,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: GetObjectPosition
     # -----------------------------------------------------------------
-    def GetObjectPosition(self, objectid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectPositionRequest')
+    def GetObjectPosition(self, objectid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectPositionRequest', async)
         parms['ObjectID'] = str(objectid)
 
         return self._PostRequest(parms)
@@ -431,8 +452,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SetObjectPosition
     # -----------------------------------------------------------------
-    def SetObjectPosition(self, objectid, pos = None) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetObjectPositionRequest')
+    def SetObjectPosition(self, objectid, pos = None, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetObjectPositionRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['Position'] = pos if pos else [128.0, 128.0, 50.0]
 
@@ -441,8 +463,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: GetObjectRotation
     # -----------------------------------------------------------------
-    def GetObjectRotation(self, objectid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectRotationRequest')
+    def GetObjectRotation(self, objectid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetObjectRotationRequest', async)
         parms['ObjectID'] = str(objectid)
 
         return self._PostRequest(parms)
@@ -450,8 +473,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SetObjectRotation
     # -----------------------------------------------------------------
-    def SetObjectRotation(self, objectid, rot = None) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetObjectRotationRequest')
+    def SetObjectRotation(self, objectid, rot = None, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetObjectRotationRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['Rotation'] = rot if rot else [0.0, 0.0, 0.0, 1.0]
 
@@ -460,8 +484,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: MessageObject
     # -----------------------------------------------------------------
-    def MessageObject(self, objectid, msg) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.MessageObjectRequest')
+    def MessageObject(self, objectid, msg, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.MessageObjectRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['Message'] = msg
 
@@ -470,8 +495,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SetPartPosition
     # -----------------------------------------------------------------
-    def SetPartPosition(self, objectid, partnum, pos = None) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartPositionRequest')
+    def SetPartPosition(self, objectid, partnum, pos = None, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartPositionRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['LinkNum'] = partnum
         parms['Position'] = pos if pos else [0.0, 0.0, 0.0]
@@ -481,8 +507,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SetPartRotation
     # -----------------------------------------------------------------
-    def SetPartRotation(self, objectid, partnum, rot = None) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartRotationRequest')
+    def SetPartRotation(self, objectid, partnum, rot = None, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartRotationRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['LinkNum'] = partnum
         parms['Rotation'] = rot if rot else [0.0, 0.0, 0.0, 1.0]
@@ -492,8 +519,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SetPartScale
     # -----------------------------------------------------------------
-    def SetPartScale(self, objectid, partnum, scale = None) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartScaleRequest')
+    def SetPartScale(self, objectid, partnum, scale = None, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartScaleRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['LinkNum'] = partnum
         parms['Scale'] = scale if scale else [1.0, 1.0, 1.0]
@@ -503,8 +531,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SetPartColor
     # -----------------------------------------------------------------
-    def SetPartColor(self, objectid, partnum, color = None, alpha = None) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartColorRequest')
+    def SetPartColor(self, objectid, partnum, color = None, alpha = None, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetPartColorRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['LinkNum'] = part
         parms['Color'] = color if color else [0.0, 0.0, 0.0]
@@ -515,8 +544,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: RegisterTouchCallback
     # -----------------------------------------------------------------
-    def RegisterTouchCallback(self, objectid, endpointid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.RegisterTouchCallbackRequest')
+    def RegisterTouchCallback(self, objectid, endpointid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.RegisterTouchCallbackRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['EndPointID'] = str(endpoint)
 
@@ -525,8 +555,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: UnregisterTouchCallback
     # -----------------------------------------------------------------
-    def UnregisterTouchCallback(self, objectid, requestid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.UnregisterTouchCallbackRequest')
+    def UnregisterTouchCallback(self, objectid, requestid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.UnregisterTouchCallbackRequest', async)
         parms['ObjectID'] = str(objectid)
         parms['RequestID'] = str(requestid)
 
@@ -535,8 +566,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: TestAsset
     # -----------------------------------------------------------------
-    def TestAsset(self, assetid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.TestAssetRequest')
+    def TestAsset(self, assetid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.TestAssetRequest', async)
         parms['AssetID'] = str(assetid)
 
         return self._PostRequest(parms)
@@ -544,8 +576,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: GetAsset
     # -----------------------------------------------------------------
-    def GetAsset(self, assetid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAssetRequest')
+    def GetAsset(self, assetid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAssetRequest', async)
         parms['AssetID'] = str(assetid)
 
         return self._PostRequest(parms)
@@ -553,8 +586,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: GetAssetFromObject
     # -----------------------------------------------------------------
-    def GetAssetFromObject(self, objectid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAssetFromObjectRequest')
+    def GetAssetFromObject(self, objectid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetAssetFromObjectRequest', async)
         parms['ObjectID'] = str(objectid)
 
         return self._PostRequest(parms)
@@ -562,8 +596,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: GetDependentAssets
     # -----------------------------------------------------------------
-    def GetDependentAssets(self, assetid) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetDependentAssetsRequest')
+    def GetDependentAssets(self, assetid, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetDependentAssetsRequest', async)
         parms['AssetID'] = assetid
 
         return self._PostRequest(parms)
@@ -571,8 +606,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: AddAsset
     # -----------------------------------------------------------------
-    def AddAsset(self, asset) :
-        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.AddAsset')
+    def AddAsset(self, asset, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.AddAsset', async)
         parms['Asset'] = asset
 
         return self._PostRequest(parms)
@@ -580,8 +616,9 @@ class OpenSimRemoteControl() :
     # -----------------------------------------------------------------
     # NAME: SensorDataRequest
     # -----------------------------------------------------------------
-    def SensorDataRequest(self, family, sensorid, values) :
-        parms = Parameters(self,'RemoteSensor','RemoteSensor.Messages.SensorDataRequest')
+    def SensorDataRequest(self, family, sensorid, values, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteSensor','RemoteSensor.Messages.SensorDataRequest', async)
         parms['SensorFamily'] = family
         parms['SensorID'] = str(sensorid)
         parms['SensorData'] = values

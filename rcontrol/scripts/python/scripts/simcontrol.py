@@ -66,6 +66,24 @@ def cmdCHAT(rc, cmdargs) :
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
+def cmdDELETE(rc, cmdargs) :
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pattern',required=True)
+    args = parser.parse_args(cmdargs)
+
+    response = rc.FindObjects(pattern = args.pattern)
+    if not response['_Success'] :
+        print 'Failed: ' + response['_Message']
+        sys.exit(-1)
+
+    for obj in response['Objects'] :
+        # print 'deleting %s' % obj
+        response = rc.DeleteObject(obj, async=True)
+
+    print 'Deleted %d objects' % len(response['Objects'])
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
 def main() :
 
     capenv = os.environ.get('OS_REMOTECONTROL_CAP')
@@ -99,6 +117,8 @@ def main() :
 
     if args.command == 'chat' :
         cmdCHAT(rc, args.cmdargs)
+    if args.command == 'delete' : 
+        cmdDELETE(rc, args.cmdargs)
     else :
         print args.command
         print args.cmdargs
