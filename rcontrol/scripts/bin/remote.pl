@@ -542,14 +542,43 @@ sub cDUMPOBJECT
     }
 
     print STDERR to_json($result,{pretty => 1}) . "\n";
+}
 
+# -----------------------------------------------------------------
+# NAME: cOBJECTINVENTORY
+# DESC: Command to dump the prims inside an object
+# -----------------------------------------------------------------
+$gCmdinfo->AddCommand('oinv','list assets in the inventory of an object');
+$gCmdinfo->AddCommandParams('oinv','-o|--objectid', ' <uuid>','identifier for the object');
+
+sub cOBJECTINVENTORY
+{
+    my $gObjectID;
+
+    $gOptions->{'o|objectid=s'} = \$gObjectID;
+    
+    if (! GetOptions(%{$gOptions}))
+    {
+	$gCmdinfo->DumpCommands('dump',"Unknown option");
+    }
+
+    $gCmdinfo->DumpCommands('oinv','missing required parameters; objectid') unless defined $gObjectID;
+
+    &CheckGlobals('oinv');
+
+    $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+    
     $result = $gRemoteControl->GetObjectInventory($gObjectID);
     if ($result->{_Success} <= 0)
     {
         print STDERR "Operation failed; " . $result->{_Message} . "\n";
     }
 
-    print STDERR to_json($result,{pretty => 1}) . "\n";
+    foreach my $obj (@{$result->{Inventory}})
+    {
+        printf("%s\t%s\t%s\n",$obj->{Name},$obj->{AssetID},$obj->{ItemType})
+    }
+
 }
 
 # -----------------------------------------------------------------
@@ -775,6 +804,7 @@ sub Main
     &cCREATEFROMASSET, exit	if ($paramCmd =~ m/^create$/i);
     &cDELETEOBJECT, exit	if ($paramCmd =~ m/^delete$/i);
     &cDUMPOBJECT, exit		if ($paramCmd =~ m/^dump$/i);
+    &cOBJECTINVENTORY, exit	if ($paramCmd =~ m/^oinv$/i);
     &cSETOBJECTPOSITION, exit	if ($paramCmd =~ m/^setpos$/i);
     &cGETOBJECTPOSITION, exit	if ($paramCmd =~ m/^getpos$/i);
     &cMESSAGEOBJECT, exit	if ($paramCmd =~ m/^msgobj$/i);
