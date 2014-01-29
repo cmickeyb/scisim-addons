@@ -614,6 +614,29 @@ class OpenSimRemoteControl() :
         return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
+    # NAME: GetSunParameters
+    # -----------------------------------------------------------------
+    def GetSunParameters(self, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.GetSunParametersRequest', async)
+
+        return self._PostRequest(parms)
+
+    # -----------------------------------------------------------------
+    # NAME: SetSunParameters
+    # Not including parameters for HorizonShift and DayTimeSunHourScale
+    # -----------------------------------------------------------------
+    def SetSunParameters(self, yearlength = 0.0, daylength = 0.0, currenttime = 0.0, async = None) :
+        async = self.AsyncRequest if async == None else async
+        parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetSunParametersRequest', async)
+        parms['YearLength'] = yearlength
+        parms['DayLength'] = daylength
+        parms['CurrentTime'] = currenttime
+
+        # return self._PostRequest(parms)
+        return self._PostDebug(parms)
+
+    # -----------------------------------------------------------------
     # NAME: SensorDataRequest
     # -----------------------------------------------------------------
     def SensorDataRequest(self, family, sensorid, values, async = None) :

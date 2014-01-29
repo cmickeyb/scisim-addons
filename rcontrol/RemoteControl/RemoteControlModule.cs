@@ -187,6 +187,7 @@ namespace RemoteControl
                 }
 
                 m_handlers.Add(new ObjectHandlers(m_scene,m_dispatcher,m_domain));
+                m_handlers.Add(new RegionHandlers(m_scene,m_dispatcher,m_domain));
                 m_handlers.Add(new TerrainHandlers(m_scene,m_dispatcher,m_domain));
                 m_handlers.Add(new CommunicationHandlers(m_scene,m_dispatcher,m_domain));
                 m_handlers.Add(new EventHandlers(m_scene,m_dispatcher,m_domain));

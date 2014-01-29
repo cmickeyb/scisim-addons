@@ -85,6 +85,42 @@ def cmdDELETE(rc, cmdargs) :
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
+def cmdGETSUN(rc, cmdargs) :
+
+    response = rc.GetSunParameters()
+    if not response['_Success'] :
+        print 'Failed: ' + response['_Message']
+        sys.exit(-1)
+
+    print "YearLength = %s" % response['YearLength']
+    print "DayLength = %s" % response['DayLength']
+    print "HorizonShift = %s" % response['HorizonShift']
+    print "DayTimeSunHourScale = %s" % response['DayTimeSunHourScale']
+    print "CurrentTime = %s" % response['CurrentTime']
+
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
+def cmdSETSUN(rc, cmdargs) :
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--time', type=float, default=0.0)
+    parser.add_argument('--day', type=float, default=0.0)
+    parser.add_argument('--year', type=float, default=0.0)
+    args = parser.parse_args(cmdargs)
+
+    response = rc.SetSunParameters(yearlength=args.year, daylength=args.day, currenttime=args.time)
+    if not response['_Success'] :
+        print 'Failed: ' + response['_Message']
+        sys.exit(-1)
+
+    print "YearLength = %s" % response['YearLength']
+    print "DayLength = %s" % response['DayLength']
+    print "HorizonShift = %s" % response['HorizonShift']
+    print "DayTimeSunHourScale = %s" % response['DayTimeSunHourScale']
+    print "CurrentTime = %s" % response['CurrentTime']
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
 def main() :
 
     capenv = os.environ.get('OS_REMOTECONTROL_CAP')
@@ -120,6 +156,10 @@ def main() :
         cmdCHAT(rc, args.cmdargs)
     if args.command == 'delete' : 
         cmdDELETE(rc, args.cmdargs)
+    if args.command == 'getsun' : 
+        cmdGETSUN(rc, args.cmdargs)
+    if args.command == 'setsun' : 
+        cmdSETSUN(rc, args.cmdargs)
     else :
         print args.command
         print args.cmdargs
