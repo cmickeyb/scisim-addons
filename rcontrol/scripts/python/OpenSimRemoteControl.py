@@ -634,7 +634,7 @@ class OpenSimRemoteControl() :
         parms['CurrentTime'] = currenttime
 
         # return self._PostRequest(parms)
-        return self._PostDebug(parms)
+        return self._PostRequest(parms)
 
     # -----------------------------------------------------------------
     # NAME: SensorDataRequest
