@@ -154,11 +154,11 @@ def main() :
 
     if args.command == 'chat' :
         cmdCHAT(rc, args.cmdargs)
-    if args.command == 'delete' : 
+    elif args.command == 'delete' : 
         cmdDELETE(rc, args.cmdargs)
-    if args.command == 'getsun' : 
+    elif args.command == 'getsun' : 
         cmdGETSUN(rc, args.cmdargs)
-    if args.command == 'setsun' : 
+    elif args.command == 'setsun' : 
         cmdSETSUN(rc, args.cmdargs)
     else :
         print args.command
