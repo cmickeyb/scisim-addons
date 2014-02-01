@@ -80,6 +80,7 @@ def AuthByUserName(rc, name, passwd, domains, lifespan) :
 
     capability = response['Capability']
     expires = response['LifeSpan'] + int(time.time())
+    print >> sys.stderr, 'capability granted, expires at %s' % time.asctime(time.localtime(expires))
     print 'export OS_REMOTECONTROL_CAP=' + capability + ':' + str(expires)
 
     DumpEndPointInfo(rc)
@@ -97,6 +98,7 @@ def AuthByUserEmail(rc, email, passwd, domains, lifespan) :
 
     capability = response['Capability']
     expires = response['LifeSpan'] + int(time.time())
+    print >> sys.stderr, 'capability granted, expires at %s' % time.asctime(time.localtime(expires))
     print 'export OS_REMOTECONTROL_CAP=' + capability + ':' + str(expires)
 
     DumpEndPointInfo(rc)
@@ -114,6 +116,7 @@ def AuthByUserUUID(rc, userid, passwd, domains, lifespan) :
 
     capability = response['Capability']
     expires = response['LifeSpan'] + int(time.time())
+    print >> sys.stderr, 'capability granted, expires at %s' % time.asctime(time.localtime(expires))
     print 'export OS_REMOTECONTROL_CAP=' + capability + ':' + str(expires)
 
     DumpEndPointInfo(rc)
@@ -136,6 +139,7 @@ def RenewCapability(rc, capability, domains, lifespan) :
 
     # capability = response['Capability']
     expires = response['LifeSpan'] + int(time.time())
+    print >> sys.stderr, 'capability granted, expires at %s' % time.asctime(time.localtime(expires))
     print 'export OS_REMOTECONTROL_CAP=' + capability + ':' + str(expires)
 
     DumpEndPointInfo(rc)
@@ -175,7 +179,7 @@ def main() :
     group.add_argument('--av_email', help='avatar email address')
     group.add_argument('--av_name', help='avatars full name')
     group.add_argument('--av_userid', help='avatars userid')
-    group.add_argument('--capability', help='existing capability for renewal',action='store_true')
+    group.add_argument('--capability', help='existing capability for renewal',action='store_true',default=capability)
 
     parser.add_argument('--passwd', help='avatars password')
     parser.add_argument('--endpoint', help='URL of the simulator dispatcher', required=eprequired, default=endpoint)
