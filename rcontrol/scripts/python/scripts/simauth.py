@@ -179,7 +179,9 @@ def main() :
     group.add_argument('--av_email', help='avatar email address')
     group.add_argument('--av_name', help='avatars full name')
     group.add_argument('--av_userid', help='avatars userid')
-    group.add_argument('--capability', help='existing capability for renewal',action='store_true',default=capability)
+    group.add_argument('--capability', help='existing capability for renewal',default=capability)
+
+    parser.add_argument('--reset', help='Reset an existing capability', action='store_true', default=False)
 
     parser.add_argument('--passwd', help='avatars password')
     parser.add_argument('--endpoint', help='URL of the simulator dispatcher', required=eprequired, default=endpoint)
@@ -196,7 +198,7 @@ def main() :
     rc = OpenSimRemoteControl.OpenSimRemoteControl(args.endpoint)
     rc.Binary = args.binary
 
-    if args.capability :
+    if args.capability and not args.reset :
         RenewCapability(rc,capability,args.domain,args.lifespan)
 
     passwd = args.passwd
