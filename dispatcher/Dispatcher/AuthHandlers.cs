@@ -113,7 +113,7 @@ namespace Dispatcher.Handlers
             m_dispatcher.RegisterMessageType(typeof(CapabilityResponse));
 
             m_console = MainConsole.Instance;
-            m_console.Commands.AddCommand("Dispatcher", false, "dispatcher show caps", "dispatch show capabilities",
+            m_console.Commands.AddCommand("Dispatcher", false, "dispatcher show capabilities", "dispatcher show capabilities",
                                           "Dump the capabilities table", "", HandleShowCapabilities);
             
         }
