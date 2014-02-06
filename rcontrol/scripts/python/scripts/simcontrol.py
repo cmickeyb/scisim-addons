@@ -69,6 +69,8 @@ def cmdCHAT(rc, cmdargs) :
 def cmdDELETE(rc, cmdargs) :
     parser = argparse.ArgumentParser()
     parser.add_argument('--pattern', help='Regular expression on object name, use .* to delete all', required=True)
+    parser.add_argument('--lower', nargs=3, required=False, default=[0.0, 0.0, 0.0])
+    parser.add_argument('--upper', nargs=3, required=False, default=[2048.0, 2048.0, 255.0])
     args = parser.parse_args(cmdargs)
 
     if args.pattern == '.*' :
@@ -79,7 +81,7 @@ def cmdDELETE(rc, cmdargs) :
         print 'Deleted all objects'
         sys.exit(1)
 
-    response = rc.FindObjects(pattern = args.pattern)
+    response = rc.FindObjects(pattern = args.pattern, coord1 = args.lower, coord2 = args.upper)
     if not response['_Success'] :
         print 'Failed: ' + response['_Message']
         sys.exit(-1)
@@ -96,9 +98,11 @@ def cmdDELETE(rc, cmdargs) :
 def cmdFIND(rc, cmdargs) :
     parser = argparse.ArgumentParser()
     parser.add_argument('--pattern', help='Regular expression on object name, use .* to select all', required=True)
+    parser.add_argument('--lower', nargs=3, required=False, default=[0.0, 0.0, 0.0])
+    parser.add_argument('--upper', nargs=3, required=False, default=[2048.0, 2048.0, 255.0])
     args = parser.parse_args(cmdargs)
 
-    response = rc.FindObjects(pattern = args.pattern)
+    response = rc.FindObjects(pattern = args.pattern, coord1=args.lower, coord2=args.upper)
     if not response['_Success'] :
         print 'Failed: ' + response['_Message']
         sys.exit(-1)
@@ -112,6 +116,29 @@ def cmdFIND(rc, cmdargs) :
             print 'Failed: ' + response['_Message']
             continue
         print output.format(details['Name'], obj, details['Position'])
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
+def cmdMOVE(rc, cmdargs) :
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pattern', help='Regular expression on object name, use .* to select all', required=False)
+    parser.add_argument('--lower', nargs=3, required=False, default=[0.0, 0.0, 0.0])
+    parser.add_argument('--upper', nargs=3, required=False, default=[2048.0, 2048.0, 255.0])
+    parser.add_argument('--offset', nargs=3, required=True)
+    args = parser.parse_args(cmdargs)
+
+    response = rc.FindObjects(pattern = args.pattern, coord1 = args.lower, coord2 = args.upper)
+    if not response['_Success'] :
+        print 'Failed: ' + response['_Message']
+        sys.exit(-1)
+
+    for obj in response['Objects'] :
+        details = rc.GetObjectData(obj)
+        if not details['_Success'] :
+            continue
+
+        pos = [float(details['Position'][x]) + float(args.offset[x]) for x in [0, 1, 2]]
+        rc.SetObjectPosition(obj, pos, async=True)
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
@@ -188,6 +215,8 @@ def main() :
         cmdDELETE(rc, args.cmdargs)
     elif args.command == 'find' :
         cmdFIND(rc, args.cmdargs)
+    elif args.command == 'move' :
+        cmdMOVE(rc, args.cmdargs)
     elif args.command == 'getsun' : 
         cmdGETSUN(rc, args.cmdargs)
     elif args.command == 'setsun' : 
