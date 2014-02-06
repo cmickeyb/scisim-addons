@@ -68,8 +68,16 @@ def cmdCHAT(rc, cmdargs) :
 # -----------------------------------------------------------------
 def cmdDELETE(rc, cmdargs) :
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pattern',required=True)
+    parser.add_argument('--pattern', help='Regular expression on object name, use .* to delete all', required=True)
     args = parser.parse_args(cmdargs)
+
+    if args.pattern == '.*' :
+        response = rc.DeleteAllObjects()
+        if not response['_Success'] :
+            print 'Failed: ' + response['_Message']
+            sys.exit(-1)
+        print 'Deleted all objects'
+        sys.exit(1)
 
     response = rc.FindObjects(pattern = args.pattern)
     if not response['_Success'] :
@@ -82,6 +90,28 @@ def cmdDELETE(rc, cmdargs) :
         response = rc.DeleteObject(obj, async=True)
 
     print 'Deleted %d objects' % count
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
+def cmdFIND(rc, cmdargs) :
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pattern', help='Regular expression on object name, use .* to select all', required=True)
+    args = parser.parse_args(cmdargs)
+
+    response = rc.FindObjects(pattern = args.pattern)
+    if not response['_Success'] :
+        print 'Failed: ' + response['_Message']
+        sys.exit(-1)
+
+    output = "{0}\t{1}\t{2}"
+
+    count = len(response['Objects'])
+    for obj in response['Objects'] :
+        details = rc.GetObjectData(obj)
+        if not details['_Success'] :
+            print 'Failed: ' + response['_Message']
+            continue
+        print output.format(details['Name'], obj, details['Position'])
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
@@ -156,6 +186,8 @@ def main() :
         cmdCHAT(rc, args.cmdargs)
     elif args.command == 'delete' : 
         cmdDELETE(rc, args.cmdargs)
+    elif args.command == 'find' :
+        cmdFIND(rc, args.cmdargs)
     elif args.command == 'getsun' : 
         cmdGETSUN(rc, args.cmdargs)
     elif args.command == 'setsun' : 
