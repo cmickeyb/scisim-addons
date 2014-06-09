@@ -18,7 +18,7 @@
     <Reference name="System" localCopy="false"/>
     <Reference name="System.Drawing" localCopy="false"/>
     <Reference name="Nini.dll" localCopy="false"/>
-    <Reference name="Newtonsoft.Json.dll" localCopy="false"/>
+    <Reference name="Newtonsoft.Json.dll" path="../../dispatcher/bin/v4_0" localCopy="false"/>
     <Reference name="OpenSim.Framework" localCopy="false"/>
     <Reference name="OpenSim.Framework.Monitoring" localCopy="false"/>
     <Reference name="OpenSim.Framework.Communications" localCopy="false"/>
