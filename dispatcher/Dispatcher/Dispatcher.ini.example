@@ -12,7 +12,7 @@ UDPPort = 23997
 
 ;; The HTTPPath is the path used to register the 
 ;; dispatcher with the simulator's http server.
-;; The synchronous path will be http://{SimulatorAddress}/{HTTPPath}
+;; The synchronous path will be http://{SimulatorAddress}/{HTTPPath}/
 HTTPPath = "/Dispatcher"
 
 ;; The maximum number of threads that can be used to process
