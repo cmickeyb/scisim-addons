@@ -201,7 +201,7 @@ class OpenSimRemoteControl() :
 
         async = self.AsyncRequest if async == None else async
         parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest', async)
-        parms['hashedpasswd'] = '$1$' + m.hexdigest()
+        parms['hashedpasswd'] = m.hexdigest()
         parms['userid'] = str(uuid)
         parms['lifespan'] = lifespan
         parms['domainlist'] = self.DomainList
@@ -217,7 +217,7 @@ class OpenSimRemoteControl() :
 
         async = self.AsyncRequest if async == None else async
         parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest', async)
-        parms['hashedpasswd'] = '$1$' + m.hexdigest()
+        parms['hashedpasswd'] = m.hexdigest()
         parms['firstname'] = names[0]
         parms['lastname'] = names[1]
         parms['lifespan'] = lifespan
@@ -232,7 +232,7 @@ class OpenSimRemoteControl() :
 
         async = self.AsyncRequest if async == None else async
         parms = Parameters(self,'Dispatcher','Dispatcher.Messages.CreateCapabilityRequest', async)
-        parms['hashedpasswd'] = '$1$' + m.hexdigest()
+        parms['hashedpasswd'] = m.hexdigest()
         parms['emailaddress'] = email
         parms['lifespan'] = lifespan
         parms['domainlist'] = self.DomainList
