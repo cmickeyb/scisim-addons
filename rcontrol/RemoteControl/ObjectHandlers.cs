@@ -303,6 +303,7 @@ namespace RemoteControl.Handlers
             }
             catch (Exception e)
             {
+                m_log.WarnFormat("[RemoteControlModule] exception thrown in CreateObjectHandler; %s",e.ToString());
                 return OperationFailed(e.Message);
             }
                 
