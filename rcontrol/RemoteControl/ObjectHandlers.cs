@@ -84,7 +84,7 @@ namespace RemoteControl.Handlers
         {
             m_jsonstore = m_scene.RequestModuleInterface<IJsonStoreModule>();
             if (m_jsonstore == null)
-                m_log.WarnFormat("[RemoteControModule] IJsonStoreModule interface not defined");
+                m_log.WarnFormat("[ObjectHandlers] IJsonStoreModule interface not defined");
         }
 
         /// -----------------------------------------------------------------
@@ -276,6 +276,8 @@ namespace RemoteControl.Handlers
 
             try
             {
+                m_log.DebugFormat("[ObjectHandlers] create object \"{0}\" from asset {1}", request.Name, request.AssetID);
+                
                 sog = GetRezReadySceneObject(request.AssetID, request.Name, request.Description,
                                              request._UserAccount.PrincipalID, UUID.Zero);
                 if (sog == null)
@@ -303,7 +305,7 @@ namespace RemoteControl.Handlers
             }
             catch (Exception e)
             {
-                m_log.WarnFormat("[RemoteControlModule] exception thrown in CreateObjectHandler; %s",e.ToString());
+                m_log.WarnFormat("[ObjectHandlers] exception thrown in CreateObjectHandler; {0}",e.ToString());
                 return OperationFailed(e.Message);
             }
                 
@@ -494,15 +496,19 @@ namespace RemoteControl.Handlers
         private SceneObjectGroup GetRezReadySceneObject(UUID assetID, string name, string description, UUID ownerID, UUID groupID)
         {
             AssetBase rezAsset = m_scene.AssetService.Get(assetID.ToString());
-
-            if (null == rezAsset)
+            if (rezAsset == null)
             {
-                m_log.WarnFormat("[ObjectHandlers]: Could not find asset {0}",assetID.ToString());
+                m_log.WarnFormat("[ObjectHandlers] Could not find asset {0}",assetID.ToString());
                 return null;
             }
 
             string xmlData = Utils.BytesToString(rezAsset.Data);
             SceneObjectGroup group = (SceneObjectGroup)SceneObjectSerializer.FromOriginalXmlFormat(xmlData);
+            if (group == null)
+            {
+                m_log.WarnFormat("[ObjectHandlers] Failed to decode asset {0}", assetID.ToString());
+                return null;
+            }
 
             group.ResetIDs();
             group.SetGroup(groupID, null);
