@@ -447,7 +447,7 @@ sub cCREATEFROMASSET
     my @gPosition;
     my @gVelocity;
     my @gRotation;
-    my $gStartParam = 0;
+    my $gStartParam = "{}";
 
     $gOptions->{'a|assetid=s'} = \$gAssetID;
     $gOptions->{'d|description=s'} = \$gDescription;
@@ -455,7 +455,7 @@ sub cCREATEFROMASSET
     $gOptions->{'l|location=f{3}'} = \@gPosition;
     $gOptions->{'v|velocity=f{3}'} = \@gVelocity;
     $gOptions->{'r|rotation=f{4}'} = \@gRotation;
-    $gOptions->{'start=i'} = \$gStartParam;
+    $gOptions->{'start=s'} = \$gStartParam;
 
     if (! GetOptions(%{$gOptions}))
     {
