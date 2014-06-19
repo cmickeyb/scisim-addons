@@ -626,7 +626,7 @@ class OpenSimRemoteControl() :
     # NAME: SetSunParameters
     # Not including parameters for HorizonShift and DayTimeSunHourScale
     # -----------------------------------------------------------------
-    def SetSunParameters(self, yearlength = 0.0, daylength = 0.0, currenttime = 0.0, async = None) :
+    def SetSunParameters(self, currenttime, daylength = 0.0, yearlength = 0.0, async = None) :
         async = self.AsyncRequest if async == None else async
         parms = Parameters(self,'RemoteControl','RemoteControl.Messages.SetSunParametersRequest', async)
         parms['YearLength'] = yearlength

@@ -159,8 +159,8 @@ namespace RemoteControl.Handlers
             if (req.DayTimeSunHourScale > 0)
                 m_SunModule.SetSunParameter("day_time_sun_hour_scale",req.DayTimeSunHourScale);
 
-            if (req.CurrentTime > 0)
-                m_SunModule.SetSunParameter("current_time",req.CurrentTime);
+            // Always set the current time
+            m_SunModule.SetSunParameter("current_time",req.CurrentTime);
 
             SunParametersResponse res = new SunParametersResponse();
             res.YearLength = m_SunModule.GetSunParameter("year_length");

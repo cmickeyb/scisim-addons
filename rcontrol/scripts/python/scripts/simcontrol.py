@@ -165,7 +165,7 @@ def cmdSETSUN(rc, cmdargs) :
     parser.add_argument('--year', type=float, default=0.0)
     args = parser.parse_args(cmdargs)
 
-    response = rc.SetSunParameters(yearlength=args.year, daylength=args.day, currenttime=args.time)
+    response = rc.SetSunParameters(args.time, daylength=args.day, yearlength=args.year)
     if not response['_Success'] :
         print 'Failed: ' + response['_Message']
         sys.exit(-1)
