@@ -177,9 +177,9 @@ namespace RemoteControl.Handlers
             // this didn't work either, 
             //AddWearablesToCurrentOutfitFolder(sp);
 
-            sp.SendAvatarDataToAllAgents();
-            sp.SendAppearanceToAllOtherAgents();
-            sp.SendAppearanceToAgent(sp); // the viewers seem to ignore this packet when it describes their own avatar
+            sp.SendAvatarDataToAllClients();
+            sp.SendAppearanceToAllOtherClients();
+            sp.SendAppearanceToClient(sp); // the viewers seem to ignore this packet when it describes their own avatar
             
             return new ResponseBase(ResponseCode.Success,"");
         }
