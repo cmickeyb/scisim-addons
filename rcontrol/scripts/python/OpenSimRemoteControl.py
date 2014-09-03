@@ -99,7 +99,7 @@ class OpenSimRemoteControl() :
 
     # -----------------------------------------------------------------
     def __init__(self, endpoint, async = False, logfile = None):
-        self.EndPoint = endpoint
+        self.EndPoint = str(endpoint)
         self.AsyncRequest = async
         self.MessagesSent = 0
         self.BytesSent = 0
