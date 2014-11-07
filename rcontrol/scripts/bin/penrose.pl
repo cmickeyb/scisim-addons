@@ -95,6 +95,7 @@ my $gTileCount = 0;
 my $gRemoteControl;
 
 my $gAssetID;
+my $gContainerName;
 my $gInputFile;
 my $gBasePosition = ();
 my $gSceneName = 'Scratch 10';
@@ -109,6 +110,7 @@ my $gUseAsync = 0;
 
 my $gOptions = {
     'a|asset=s'		=> \$gAssetID,
+    'c|container=s'	=> \$gContainerName,
     'f|file=s'		=> \$gInputFile,
     'l|location=f{3}'	=> \@gBasePosition,
     's|scene=s'		=> \$gSceneName,
@@ -148,11 +150,6 @@ sub CheckGlobals
 {
     my $cmd = shift(@_);
 
-    if (! defined $gAssetID)
-    {
-        die "Missing required parameter; no tile asset specified\n";
-    }
-
     unless (@gBasePosition)
     {
         @gBasePosition = (128.0, 128.0, 25.1);
@@ -166,6 +163,42 @@ sub CheckGlobals
     $gRemoteControl = RemoteControlStream->new(URL => $gSynchEP, SCENE => $gSceneName, REQUESTTYPE => ($gUseAsync ? 'async' : 'sync'));
     ## $gRemoteControl = RemoteControlPacket->new(ENDPOINT => $gAsyncEP, SCENE => $gSceneName);
     $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
+
+    if (defined $gContainerName) 
+    {
+        ($path, $item) = split('/',$gContainerName,2);
+
+        my @a = (0.0, 0.0, 0.0);
+        my @b = (1024.0, 1024.0, 1024.0);
+
+        $result = $gRemoteControl->FindObjects(\@a, \@b, $path);
+        unless (defined $result and $result->{_Success} > 0)
+        {
+            die "Unable to find container; $path\n";
+        }
+
+        $containerID = $result->{Objects}[0];
+        $result = $gRemoteControl->GetObjectInventory($containerID);
+        unless (defined $result and $result->{_Success} > 0)
+        {
+            die "Unable to retrieve inventory for container $containerID\n";
+        }
+        
+        foreach my $invitem ( @{$result->{Inventory}} )
+        {
+            if ($invitem->{Name} eq $item)
+            {
+                $gAssetID = $invitem->{AssetID};
+                last;
+            }
+        }
+    }
+
+    if (! defined $gAssetID)
+    {
+        die "Missing required parameter; no tile asset specified\n";
+    }
+
 }
     
 # -----------------------------------------------------------------
