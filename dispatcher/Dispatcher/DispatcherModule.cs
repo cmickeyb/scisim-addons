@@ -228,7 +228,8 @@ namespace Dispatcher
                 m_commands.RegionsLoaded();
 
                 // Start the listener thread here
-                Watchdog.StartThread(AsynchronousListenLoop,"Dispatcher",ThreadPriority.Normal,false,true,null,4*m_socketTimeout);
+                //Watchdog.StartThread(AsynchronousListenLoop,"Dispatcher",ThreadPriority.Normal,false,true,null,4*m_socketTimeout);
+                WorkManager.StartThread(AsynchronousListenLoop,"Dispatcher",ThreadPriority.Normal,false,true,null,4*m_socketTimeout);
 
                 // Add a handler to the HTTP server
                 // MainServer.Instance.AddHTTPHandler(m_httppath,HandleSynchronousRequest);
