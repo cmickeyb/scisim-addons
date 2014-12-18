@@ -74,8 +74,8 @@ namespace Dispatcher
         bool UnregisterEndPoint(UUID id);
         EndPoint LookupEndPoint(UUID id);
 
-        UUID CreateDomainCapability(HashSet<String> domainList, UUID userid, int lifespan);
-        UUID CreateDomainCapability(String domain, UUID userid, int lifespan);
+        UUID CreateDomainCapability(String scene, HashSet<String> domainList, UUID userid, int lifespan);
+        UUID CreateDomainCapability(String scene, String domain, UUID userid, int lifespan);
         bool DestroyDomainCapability(UUID capability);
 
         bool RegisterMessageType(Type messagetype);

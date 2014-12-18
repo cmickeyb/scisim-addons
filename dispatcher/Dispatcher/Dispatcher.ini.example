@@ -29,6 +29,16 @@ MaxInterPingTime = 3000
 ;; happen in physically isolated networks.
 UseAuthentication = True
 
+;; Specify that estate managers or the estate owner may
+;; access dispatcher commands regardless of account access level
+GrantEstateManagersAccess = true
+
+;; Specify that grid managers may access dispatcher commands. A grid
+;; manager is determined by the access level of the account. Most user
+;; accounts have access level of 1. Grid "gods" have access level 255
+GrantGridManagersAccess = false
+GridManagerAccessLevel = 100
+
 ;; Specify the maximum lifespan of a capability in seconds. The capability
 ;; can be created or renewed with a maximum life span.
 MaxLifeSpan = 3000

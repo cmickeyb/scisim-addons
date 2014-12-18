@@ -498,18 +498,18 @@ namespace Dispatcher
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
-        public UUID CreateDomainCapability(HashSet<String> domainList, UUID userid, int lifespan)
+        public UUID CreateDomainCapability(String scene, HashSet<String> domainList, UUID userid, int lifespan)
         {
-            return m_authorizer.CreateDomainCapability(domainList,userid,lifespan);
+            return m_authorizer.CreateDomainCapability(scene,domainList,userid,lifespan);
         }
 
         /// -----------------------------------------------------------------
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
-        public UUID CreateDomainCapability(String domain, UUID userid, int lifespan)
+        public UUID CreateDomainCapability(String scene, String domain, UUID userid, int lifespan)
         {
-            return m_authorizer.CreateDomainCapability(domain,userid,lifespan);
+            return m_authorizer.CreateDomainCapability(scene,domain,userid,lifespan);
         }
 
         /// -----------------------------------------------------------------

@@ -90,6 +90,11 @@ namespace Dispatcher.Handlers
         
         private int m_maxLifeSpan = 300;
         private bool m_useAuthentication = true;
+        private bool m_grantEstateManagerAccess = true;
+        private bool m_grantGridManagerAccess = false;
+        private int m_gridManagerAccessLimit = 256;
+
+
         private DispatcherModule m_dispatcher = null;
         private List<Scene> m_sceneList = new List<Scene>();
         private Dictionary<string,Scene> m_sceneCache = new Dictionary<string,Scene>();
@@ -105,7 +110,13 @@ namespace Dispatcher.Handlers
         {
             m_dispatcher = dispatcher;
             m_maxLifeSpan = config.GetInt("MaxLifeSpan",m_maxLifeSpan);
-            m_useAuthentication = config.GetBoolean("UseAuthentication",m_useAuthentication);
+
+            // these flags set the default behavior for authentication, the settings specified
+            // turn ON authentication and grants access to estate managers only
+            m_useAuthentication = config.GetBoolean("UseAuthentication", m_useAuthentication);
+            m_grantEstateManagerAccess = config.GetBoolean("GrantEstateManagersAccess", true);
+            m_grantGridManagerAccess = config.GetBoolean("GrantGridManagersAccess", false);
+            m_gridManagerAccessLimit = config.GetInt("GridManagerAccessLevel", 256);
 
             m_dispatcher.RegisterPreOperationHandler(typeof(CreateCapabilityRequest),CreateCapabilityRequestHandler);
             m_dispatcher.RegisterOperationHandler(m_dispatcher.Domain,typeof(RenewCapabilityRequest),RenewCapabilityRequestHandler);
@@ -129,6 +140,7 @@ namespace Dispatcher.Handlers
             cdt.AddColumn("Capability",36);
             cdt.AddColumn("Expiration",15);
             cdt.AddColumn("User Name",30);
+            cdt.AddColumn("Scene",30);
             cdt.AddColumn("Domains",50);
 
             int now = Util.EnvironmentTickCount();
@@ -144,7 +156,7 @@ namespace Dispatcher.Handlers
                 foreach (string s in cap.DomainList)
                     doms += s + ",";
 
-                cdt.AddRow(cap.Capability.ToString(),time,name,doms);
+                cdt.AddRow(cap.Capability.ToString(),time,name,cap.SceneName,doms);
             }
             
             m_console.OutputFormat(cdt.ToString());
@@ -171,6 +183,29 @@ namespace Dispatcher.Handlers
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
+        public bool AuthorizeCapability(Scene scene, UserAccount account)
+        {
+            // If authentication is off completely, then just grant the capability
+            if (! m_useAuthentication)
+                return true;
+            
+            // If we are allowing estate managers to access the dispatcher interface, then verify that the
+            // account is one of the estate managers
+            if (m_grantEstateManagerAccess && scene.RegionInfo.EstateSettings.IsEstateManagerOrOwner(account.PrincipalID))
+                return true;
+            
+            // If we are allowing grid managers to access the dispatcher interface, then verify that the
+            // account access level indicates that the person is a grid manager
+            if (m_grantGridManagerAccess && account.UserLevel >= m_gridManagerAccessLimit)
+                return true;
+            
+            return false;
+        }
+
+        /// -----------------------------------------------------------------
+        /// <summary>
+        /// </summary>
+        // -----------------------------------------------------------------
         public bool AuthorizeRequest(RequestBase irequest)
         {
             if (! m_useAuthentication)
@@ -178,12 +213,17 @@ namespace Dispatcher.Handlers
             
             UserAccount acct;
             HashSet<String> dlist;
-            if (m_capCache.GetCapability(irequest._Capability, out acct, out dlist))
+            String scene;
+            
+            if (m_capCache.GetCapability(irequest._Capability, out acct, out dlist, out scene))
             {
                 if (irequest._Domain == m_dispatcher.Domain || dlist.Contains(irequest._Domain) || dlist.Contains(MasterDomain))
                 {
-                    irequest._UserAccount = acct;
-                    return true;
+                    if (irequest._Scene == scene)
+                    {
+                        irequest._UserAccount = acct;
+                        return true;
+                    }
                 }
             }
             
@@ -203,15 +243,15 @@ namespace Dispatcher.Handlers
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        public UUID CreateDomainCapability(String domain, UUID userid, int span)
+        public UUID CreateDomainCapability(String scene, String domain, UUID userid, int span)
         {
             HashSet<string> domainList = new HashSet<String>();
             domainList.Add(domain);
             
-            return CreateDomainCapability(domainList,userid,span);
+            return CreateDomainCapability(scene,domainList,userid,span);
         }
         
-        public UUID CreateDomainCapability(HashSet<String> domainList, UUID userid, int span)
+        public UUID CreateDomainCapability(String scene, HashSet<String> domainList, UUID userid, int span)
         {
             // Sanity check
             if (m_sceneList.Count == 0)
@@ -238,7 +278,7 @@ namespace Dispatcher.Handlers
             }
 
             UUID capability = UUID.Random();
-            m_capCache.AddCapability(capability,acct,domainList,span);
+            m_capCache.AddCapability(capability,acct,domainList,scene,span);
             return capability;
         }
 
@@ -292,8 +332,14 @@ namespace Dispatcher.Handlers
 
             // Authenticate the user with the hashed passwd from the request
             if (scene.AuthenticationService.Authenticate(account.PrincipalID,request.HashedPasswd,0) == String.Empty)
-                return OperationFailed(String.Format("failed to authenticate user {0}",request.UserID.ToString()));
+                return OperationFailed(String.Format("failed to authenticate user {0}", account.PrincipalID.ToString()));
             
+            if (! AuthorizeCapability(scene, account))
+                return OperationFailed(String.Format("user {0} is not authorized to access this interface", account.PrincipalID.ToString()));
+
+            // OK... we have validated all the requirements for access to the dispatcher messages
+            // so its now time to build & save the capability
+
             HashSet<String> dlist = new HashSet<String>(request.DomainList);
 
             // Clamp the lifespan for externally requested capabilities, region modules can register
@@ -305,7 +351,7 @@ namespace Dispatcher.Handlers
 
             // add it to the authentication cache
             UUID capability = UUID.Random();
-            m_capCache.AddCapability(capability,account,dlist,span);
+            m_capCache.AddCapability(capability,account,dlist,scene.Name,span);
 
             return new CapabilityResponse(capability,span);
         }
@@ -321,9 +367,6 @@ namespace Dispatcher.Handlers
             
             RenewCapabilityRequest request = (RenewCapabilityRequest)irequest;
 
-            // Get the domains...
-            HashSet<String> dlist = new HashSet<String>(request.DomainList);
-
             // Clamp the lifespan for externally requested capabilities, region modules can register
             // caps with longer or infinite lifespans
             if (request.LifeSpan <= 0)
@@ -332,7 +375,7 @@ namespace Dispatcher.Handlers
             int span = Math.Min(request.LifeSpan,m_maxLifeSpan);
             
             // update the capability cache
-            if (! m_capCache.UpdateCapability(request._Capability,dlist,span))
+            if (! m_capCache.UpdateCapability(request._Capability,span))
                 return OperationFailed(String.Format("unable to update the capability"));
             
             return new CapabilityResponse(request._Capability,span);

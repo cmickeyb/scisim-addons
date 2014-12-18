@@ -78,16 +78,18 @@ namespace Dispatcher.Utils
         public UUID Capability { get; set; }
         public UserAccount Account { get; set; }
         public HashSet<String> DomainList { get; set; }
+        public String SceneName { get; set; }
 
         public int LastRefresh { get; set; }
         public int LifeSpan { get; set; }
 
-        public CapabilityInfo(UUID cap, UserAccount acct, HashSet<String> dlist, int span)
+        public CapabilityInfo(UUID cap, UserAccount acct, HashSet<String> dlist, String scene, int span)
         {
             Capability = cap;
             Account = acct;
             DomainList = dlist;
-
+            SceneName = scene;
+            
             LifeSpan = span * 1000;
             LastRefresh = Util.EnvironmentTickCount();
         }
@@ -97,7 +99,8 @@ namespace Dispatcher.Utils
             Capability = UUID.Random();
             Account = null;
             DomainList = new HashSet<String>();
-
+            SceneName = String.Empty;
+            
             LifeSpan = 0;
             LastRefresh = 0;
         }
@@ -126,11 +129,11 @@ namespace Dispatcher.Utils
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
-        public bool AddCapability(UUID cap, UserAccount acct, HashSet<String> dlist, int span)
+        public bool AddCapability(UUID cap, UserAccount acct, HashSet<String> dlist, String scene, int span)
         {
             lock (CapabilityCollection)
             {
-                CapabilityInfo capinfo = new CapabilityInfo(cap,acct,dlist,span);
+                CapabilityInfo capinfo = new CapabilityInfo(cap,acct,dlist,scene,span);
                 CapabilityCollection.Add(cap,capinfo);
                 return true;
             }
@@ -170,7 +173,7 @@ namespace Dispatcher.Utils
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
-        public bool GetCapability(UUID cap, out UserAccount acct, out HashSet<String> dlist)
+        public bool GetCapability(UUID cap, out UserAccount acct, out HashSet<String> dlist, out String scene)
         {
             lock (CapabilityCollection)
             {
@@ -181,11 +184,13 @@ namespace Dispatcher.Utils
                 {
                     acct = null;
                     dlist = null;
+                    scene = String.Empty;
                     return false;
                 }
                 
                 acct = capinfo.Account;
                 dlist = capinfo.DomainList;
+                scene = capinfo.SceneName;
                 capinfo.LastRefresh = Util.EnvironmentTickCount();
 
                 return true;
@@ -196,7 +201,7 @@ namespace Dispatcher.Utils
         /// <summary>
         /// </summary>
         /// -----------------------------------------------------------------
-        public bool UpdateCapability(UUID cap, HashSet<String> dlist, int span)
+        public bool UpdateCapability(UUID cap, int span)
         {
             lock (CapabilityCollection)
             {
@@ -205,7 +210,6 @@ namespace Dispatcher.Utils
                 if (! CapabilityCollection.TryGetValue(cap, out capinfo))
                     return false;
                 
-                capinfo.DomainList = dlist;
                 capinfo.LifeSpan = span * 1000;
                 capinfo.LastRefresh = Util.EnvironmentTickCount();
 
