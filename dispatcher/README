@@ -1,0 +1,38 @@
+Extending the behavior of OpenSim primarily involves adding code to the
+simulator itself through in-world scripts written in LSL. To enable a
+broader set of languages and applications, we built Dispatcher, a
+language-independent API for external scripting of OpenSim
+regions. Using Dispatcher, scripts can be written in any language that
+provides a JSON messaging interface; the package comes with libraries
+for Perl and Python. The Dispatcher API supports scene update
+operations, asset manipulation, inventory and avatar appearance changes,
+and handling of in-world events. 
+
+Dispatcher defines a message-based, layered interface for interacting
+with an OpenSim region. There are three layers: the transport layer, the
+presentation layer and the messaging layer. 
+
+The transport layer facilitates synchronous and asynchronous
+communication with OpenSim through HTTP over TCP or UDP connections. It
+includes facilities for managing end points for callbacks that simplify,
+for example, the implementation of event handlers.
+
+All dispatcher messages JSON blobs. The presentation layer provides two
+encodings, a standard text-based JSON encoding and a binary BSON
+encoding. Typically, the text encoding is easier to build and debug. The
+binary encoding is often more compact and substantially faster to
+decode. For applications controlling real-time behaviors of objects, the
+binary encoding is a good choice.
+
+The messaging layer implements a set of messages that enable interaction
+with an OpenSim scene. The current implementation provides messages for
+managing assets, avatars, communication, object properties including
+object dynamics (position, velocity, acceleration), and some events.
+
+Every message contains fields for validating the request. These include
+the scene where the message is handled, the message domain (e.g. avatar
+messages or object messages), a capability used to verify that
+permission has been granted to process the message, and a flag to
+indicate whether the message should be processed synchronously or
+asynchronously. 
+
