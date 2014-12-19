@@ -36,3 +36,39 @@ permission has been granted to process the message, and a flag to
 indicate whether the message should be processed synchronously or
 asynchronously. 
 
+The dispatcher module defines three message domains (other domains are
+defined in the companion "remote control" package). These are
+authentication messages, informational messages, and endpoint messages. 
+
+Informational messages provide self-inspection for a particular
+dispatcher instance. 
+
+* InfoRequest -- request information about the dispatcher instance
+  including connection information, a list of scenes, and a list of
+  messages supported by the dispatcher.
+
+* MessageFormatRequest -- request information about the structure of a
+  particular message; the response is an instance of the message with its
+  default values.
+
+EndPoint messages provide a means for creating a representation in the
+dispatcher instance of an endpoint to which the dispatcher can send
+asynchronous responses to the client. It is principally used for
+callbacks associated with events.
+
+* CreateEndPointRequest -- create an endpoint for communication via UDP,
+  host and port must be provided along with a lifespan. The lifespan
+  provides an estimate for how long the information will be cached in the
+  dispatcher before it is removed. The dispatcher can define a maximum
+  lifespan for endpoints.
+
+* RenewEndPointRequest -- extend the lifespan of the endpoint. This is
+  really a "keep alive" message for the endpoint; its the client's way of
+  telling the dispatcher that it is still listening on the port.
+
+* CloseEndPointRequest -- this message lets the dispatcher know that the
+  endpoint is no longer necessary and any resources associated with it can
+  be reclaimed. Removing the endpoint also removes all callbacks
+  associated with it.
+
+Authentication messages
