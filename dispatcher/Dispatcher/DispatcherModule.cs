@@ -670,8 +670,9 @@ namespace Dispatcher
                 return handler(req);
 
             // Check to see if we have a valid capability and expand it
-            if (! m_authorizer.AuthorizeRequest(req))
-                return OperationFailed("Unauthorized invocation");
+            String message;
+            if (! m_authorizer.AuthorizeRequest(req, out message))
+                return OperationFailed(String.Format("Unauthorized invocation; {0}", message));
 
             // Find the regular handler
             if (! FindHandler(req,out handler))

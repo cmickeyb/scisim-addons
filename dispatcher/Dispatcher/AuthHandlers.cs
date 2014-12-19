@@ -206,8 +206,9 @@ namespace Dispatcher.Handlers
         /// <summary>
         /// </summary>
         // -----------------------------------------------------------------
-        public bool AuthorizeRequest(RequestBase irequest)
+        public bool AuthorizeRequest(RequestBase irequest, out String message)
         {
+            message = String.Empty;
             if (! m_useAuthentication)
                 return true;
             
@@ -224,7 +225,19 @@ namespace Dispatcher.Handlers
                         irequest._UserAccount = acct;
                         return true;
                     }
+                    else
+                    {
+                        message = "capability does not authorize access to scene";
+                    }
                 }
+                else
+                {
+                    message = "capability does not authorize access to message domain";
+                }
+            }
+            else
+            {
+                message = "no such capability";
             }
             
             return false;
