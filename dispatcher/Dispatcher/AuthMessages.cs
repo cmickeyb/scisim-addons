@@ -114,9 +114,6 @@ namespace Dispatcher.Messages
         [JsonProperty]
         public int LifeSpan { get; set; }
 
-        [JsonProperty]
-        public List<String> DomainList { get; set; }
-        
         // -----------------------------------------------------------------
         /// <summary>
         /// 
@@ -125,7 +122,6 @@ namespace Dispatcher.Messages
         public RenewCapabilityRequest()
         {
             LifeSpan = 300;
-            DomainList = new List<String>();
         }
     }
     
