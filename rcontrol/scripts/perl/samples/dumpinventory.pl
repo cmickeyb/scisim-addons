@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # -----------------------------------------------------------------
-# Copyright (c) 2012 Intel Corporation
+# Copyright (c) 2013 Intel Corporation
 # All rights reserved.
 
 # Redistribution and use in source and binary forms, with or without
@@ -72,50 +72,82 @@ Mic Bowman, E<lt>mic.bowman@intel.comE<gt>
 
 =cut
 
-# -----------------------------------------------------------------
-# Set up the library locations
-# -----------------------------------------------------------------
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use lib "/share/opensim/lib";
+
+use File::Path qw/make_path/;
+use File::Spec;
 
 my $gCommand = $FindBin::Script;
 
-use File::Basename;
-use File::Path qw/make_path/;
-
-use Carp;
 use JSON;
-
+use Digest::MD5 qw(md5_hex);
 use Getopt::Long;
-use Time::HiRes;
 
-use RemoteControl;
+use Simian;
+use OpenSim::RemoteControl;
+use OpenSim::RemoteControl::Stream;
 use Helper::CommandInfo;
 
-# -----------------------------------------------------------------
-# Globals
-# -----------------------------------------------------------------
-my $gRemoteControl;
+# these describe how the user is identified
+my $gIDValue;
+my $gIDType;
 
-# -----------------------------------------------------------------
-# Configuration variables
-# -----------------------------------------------------------------
 my $gInventoryRoot;
 my $gAssetRoot;
 my $gSceneName;
 my $gEndPointURL;
 
+my $gAvatarName;
+my $gAvatarUUID;
+my $gSimianURL;
+my $gSimian;
+my $gPath = '';
+
 my $gOptions = {
+    'i|uuid=s'          => \$gAvatarUUID,
+    'n|name=s'		=> \$gAvatarName,
+    'p|path=s'		=> \$gPath,
     'root=s'		=> \$gInventoryRoot,
-    's|scene=s'		=> \$gSceneName,
-    'u|url=s' 		=> \$gEndPointURL,
+    'simian=s' 		=> \$gSimianURL,
+    'dispatch=s'	=> \$gEndPointURL,
+    's|scene=s'		=> \$gSceneName
 };
 
-### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-### INITIALIZATION ROUTINES
-### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+my $gCmdinfo = Helper::CommandInfo->new(USAGE => "USAGE: $gCommand <command> <options>");
 
+$gCmdinfo->AddCommand('globals','options common to all commands');
+$gCmdinfo->AddCommandParams('globals','-i|--uuid',' <string>','avatars uuid');
+$gCmdinfo->AddCommandParams('globals','-n|--name',' <string>','avatars full name');
+$gCmdinfo->AddCommandParams('globals','-r|--root',' <string>','directory where inventory will be dumped');
+$gCmdinfo->AddCommandParams('globals','-p|--path',' <string>','inventory path to dump');
+$gCmdinfo->AddCommandParams('globals','-u|--url',' <string>','URL for simian grid functions');
+
+# -----------------------------------------------------------------
+# NAME: InitializeSimian
+# DESC: Check to make sure all of the required globals are set
+# -----------------------------------------------------------------
+sub InitializeSimian
+{
+    my $cmd = shift(@_);
+
+    $gSimianURL = $ENV{'SIMIAN'} unless defined $gSimianURL;
+    if (! defined $gSimianURL)
+    {
+        $gCmdinfo->DumpCommands(undef,"No Simian URL specified, please set SIMIAN environment variable");
+    }
+
+    $gIDValue = $gAvatarName, $gIDType = 'Name' if defined $gAvatarName;
+    $gIDValue = $gAvatarUUID, $gIDType = 'UserID' if defined $gAvatarUUID;
+
+    if (! defined $gIDValue)
+    {
+        $gCmdinfo->DumpCommands(undef,"Avatar name not fully specified");
+    }
+
+    $gSimian = Simian->new(URL => $gSimianURL);
+}
+    
 # -----------------------------------------------------------------
 # NAME: AuthenticateRequest
 # DESC: Return a valid capability
@@ -137,7 +169,7 @@ sub AuthenticateRequest
 # -----------------------------------------------------------------
 # NAME: Initialize
 # -----------------------------------------------------------------
-sub Initialize
+sub InitializeDispatcher
 {
     $gEndPointURL = $ENV{'OS_REMOTECONTROL_URL'} unless defined $gEndPointURL;
     $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
@@ -148,24 +180,20 @@ sub Initialize
     die "unable to find inventory root directly; $gInventoryRoot\n" unless -d $gInventoryRoot;
     make_path($gAssetRoot);     # make sure the asset directory exists
 
-    $gRemoteControl = RemoteControlStream->new(URL => $gEndPointURL, SCENE => $gSceneName);
+    $gRemoteControl = OpenSim::RemoteControl::Stream->new(URL => $gEndPointURL, SCENE => $gSceneName);
     $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
 }
 
 # -----------------------------------------------------------------
-# NAME: SlurpFile
-# DESC: Read an entire file into a string
+# NAME: OperationFailed
 # -----------------------------------------------------------------
-sub SlurpFile
+sub OperationFailed
 {
-    my $file = shift;
+    my $msg1 = shift(@_);
+    my $msg2 = shift(@_);
+    print STDERR "$msg1; $msg2\n";
 
-    local $/ = undef;
-    open(FILE,"<$file") || die "unable to open $file for reading; $!\n";
-    my $string = <FILE>;
-    close(FILE);
-
-    return $string;
+    return ();
 }
 
 # -----------------------------------------------------------------
@@ -183,29 +211,6 @@ sub MakeAssetPath
 }
 
 # -----------------------------------------------------------------
-# NAME: RequireRemoteAsset
-# DESC: Make sure there is a copy of the asset on the server
-# -----------------------------------------------------------------
-sub RequireRemoteAsset
-{
-    my $assetid = shift(@_);
-    my $file = &MakeAssetPath($assetid);
-
-    croak "there is no local copy of the asset $assetid\n" unless -e $file;
-    
-    my $result = $gRemoteControl->TestAsset($assetid);
-    die "TestAsset returned an error; " . $result->{_Message} . "\n"
-        if $result->{_Success} <= 0;
-
-    return if $result->{Exists};
-    
-    my $asset = decode_json(SlurpFile($file));
-    $result = $gRemoteControl->AddAsset($asset);
-    die "AddAsset returned an error; " . $result->{_Message} . "\n"
-        if $result->{_Success} <= 0;
-}
-
-# -----------------------------------------------------------------
 # NAME: RequireLocalAsset
 # DESC: Make sure there is a local copy of an asset
 # -----------------------------------------------------------------
@@ -217,12 +222,13 @@ sub RequireLocalAsset
     return if -e $file;
 
     my $result = $gRemoteControl->GetAsset($assetid);
-    die "Unable to retrieve asset $assetid; " . $result->{_Message} . "\n"
+    return &OperationFailed("Unable to retrieve asset $assetid",$result->{_Message})
         if $result->{_Success} <= 0;
 
     my $asset = $result->{'Asset'};
 
-    die "unable to open asset file $file; $!\n" unless open($fh,">$file");
+    return &OperationFailed("Unable to open asset file $file",$!)
+        unless open($fh,">$file");
     print $fh encode_json($result->{'Asset'});
     close $fh;
 }
@@ -240,7 +246,8 @@ sub SaveAsset
 
     return if -e $file;
 
-    die "unable to open asset file $file; $!\n" unless open($fh,">$file");
+    return &OperationFailed("Unable to open asset file $file",$!)
+        unless open($fh,">$file");
     print $fh encode_json($asset);
     close $fh;
 }
@@ -254,39 +261,108 @@ sub GetAssetDependencies
     my $asset = shift(@_);
     
     my $result = $gRemoteControl->GetDependentAssets($asset);
-    die "Unable to retrieve dependencies for $asset; " . $result->{_Message} . "\n"
+    return &OperationFailed("Unable to retrieve dependencies for $asset",$result->{_Message})
         if $result->{_Success} <= 0;
 
     return @{$result->{'DependentAssets'}};
 }
 
 # -----------------------------------------------------------------
-# NAME: cGETOBJECT
-# DESC: create a local inventory entry from an object
+# NAME: FindInventoryNodeByName
 # -----------------------------------------------------------------
-sub cGETOBJECT
+sub FindInventoryNodeByName
 {
-    my $invpath;
-    my $object;
-    my $description;
+    my $uuid = shift(@_);
+    my $itemID = shift(@_);
+    my $pname = shift(@_);
 
-    $gOptions->{'o|object=s'} = \$object;
-    $gOptions->{'p|path=s'} = \$invpath;
-    $gOptions->{'d|description=s'} = \$description;
+    my $params = {
+        'IncludeFolders' => 1,
+        'IncludeItems' => 1,
+        'ChildrenOnly' => 1
+    };
 
-    if (! GetOptions(%{$gOptions}))
+    my $items = $gSimian->GetInventoryNode($itemID,$uuid,$params);
+    foreach my $item (@{$items})
     {
-        die "Unknown option\n";
+        # return $item->{'ID'} if ($item->{'Name'} eq $pname) && ($item->{'Type'} eq "Folder");
+        return $item->{'ID'} if $item->{'Name'} eq $pname;
     }
 
-    &Initialize();
+    die "unable to locate inventory node; $pname";
+}
 
-    die "Missing required parameter; object\n" unless defined $object;
-    die "Missing required parameter; path\n" unless defined $invpath;
+# -----------------------------------------------------------------
+# NAME: FindInventoryNodeByPath
+# -----------------------------------------------------------------
+sub FindInventoryNodeByPath
+{
+    my $uuid = shift(@_);
+    my $path = shift(@_);
+    my @pathQ = File::Spec->splitdir($path);
+
+    my $itemID = $uuid;
+    while (@pathQ)
+    {
+        my $pname = shift(@pathQ);
+        next if $pname eq "";
+
+        $itemID = &FindInventoryNodeByName($uuid,$itemID,$pname);
+    }
     
-    # ---------- Get the asset associated with the object ----------
-    my $result = $gRemoteControl->GetAssetFromObject($object);
-    die "Failed to get asset for the object; " . $result->{_Message} . "\n"
+    return $itemID;
+}
+
+
+# -----------------------------------------------------------------
+# NAME:
+# -----------------------------------------------------------------
+sub CleanName
+{
+    my $name = shift(@_);
+    $name =~ s@/@_@g;
+
+    return $name;
+}
+
+# -----------------------------------------------------------------
+# NAME:
+# -----------------------------------------------------------------
+sub CleanPath
+{
+    my $path = shift(@_);
+    $path =~ s/[:;'"-]//g;
+    $path =~ s@/\s+@/@;
+    $path =~ s@\s+/@/@;
+    $path =~ s@\s+$@@;
+    $path =~ s@\s+@_@g;
+
+    return $path;
+}
+
+# -----------------------------------------------------------------
+# NAME:
+# -----------------------------------------------------------------
+sub ProcessFolder
+{
+    my $ipath = shift(@_);
+    my $path = &CleanPath($gInventoryRoot . $ipath);
+
+    make_path($path) unless -d $path;
+}
+
+# -----------------------------------------------------------------
+# NAME:
+# -----------------------------------------------------------------
+sub ProcessItem
+{
+    my $path = shift(@_);
+    my $item = shift(@_);
+
+    # ---------- Grab and save the asset ----------
+    my $assetid = $item->{'AssetID'};
+    my $result = $gRemoteControl->GetAsset($assetid);
+    return &OperationFailed("Failed to get asset for $assetid",$result->{_Message})
         if $result->{_Success} <= 0;
 
     my $asset = $result->{'Asset'};
@@ -298,95 +374,90 @@ sub cGETOBJECT
     {
         &RequireLocalAsset($dasset);
     }
-
+    
     # ---------- Save the inventory file ----------
-    my $invitem = {};
+    my $name = &CleanName($item->{'Name'});
+
     $invitem->{'AssetID'} = $asset->{'AssetID'};
     $invitem->{'AssetType'} = $asset->{'ContentType'};
-    $invitem->{'Description'} = $description || $asset->{'Description'};
+    $invitem->{'Description'} = $item->{'Description'} || $asset->{'Description'};
     $invitem->{'CreatorID'} = $asset->{'CreatorID'};
     $invitem->{'AssetDependencies'} = \@depends;
 
-    my $perms = {};
-    $perms->{'NextOwnerMask'} = 0;
-    $perms->{'OwnerMask'} = 0;
-    $perms->{'EveryoneMask'} = 0;
-    $perms->{'BaseMask'} = 0;
-
+    my $perms = {}; 
+    my $iperms = $item->{'ExtraData'}->{'Permissions'};
+    $perms->{'NextOwnerMask'} = $iperms->{'NextOwnerMask'} || 0;
+    $perms->{'OwnerMask'} = $iperms->{'OwnerMask'} || 0;
+    $perms->{'EveryoneMask'} = $iperms->{'EveryoneMask'} || 0;
+    $perms->{'BaseMask'} = $iperms->{'BaseMask'} || 0;
+    
     $invitem->{'Permissions'} = $perms;
 
-    open($fh,">$gInventoryRoot/$invpath") || croak "unable to open file $invpath; $!\n";
+    my $file = &CleanPath($gInventoryRoot . $path . '/' . $name);
+    return &OperationFailed("unable to open file $file",$!)
+        unless open($fh,">$file");
     print $fh to_json($invitem,{pretty => 1});
     close $fh;
 }
 
-# -----------------------------------------------------------------
-# NAME: cPUTOBJECT
-# DESC: Rez an object from an inventory entry
-# -----------------------------------------------------------------
-sub cPUTOBJECT
-{
-    my $invpath;
-    my @position;
-    my @velocity;
-    my @rotation;
-    my $startparam;
-
-    $gOptions->{'p|path=s'} = \$invpath;
-    $gOptions->{'l|location=f{3}'} = \@position;
-    $gOptions->{'v|velocity=f{3}'} = \@velocity;
-    $gOptions->{'r|rotation=f{4}'} = \@rotation;
-    $gOptions->{'start=s'} = \$startparam;
-
-    if (! GetOptions(%{$gOptions}))
-    {
-        die "Unknown option\n";
-    }
-
-    &Initialize();
-
-    @position = (128.0, 128.0, 30.0) unless @position;
-    @rotation = (0.0, 0.0, 0.0, 1.0) unless @rotation;
-    @velocity = (0.0, 0.0, 0.0) unless @velocity;
-
-    die "Missing required parameter; path\n" unless defined $invpath;
-    die "No such inventory item; $invpath\n" unless -e "$gInventoryRoot/$invpath";
-
-    my $invitem = from_json(&SlurpFile("$gInventoryRoot/$invpath"));
-    my $type = $invitem->{'AssetType'};
-    die "Item of type $type cannot be created; expecting application/vnd.ll.primitive\n"
-        if $type ne 'application/vnd.ll.primitive';
-
-    my $assetid = $invitem->{'AssetID'};
-    my $description = $invitem->{'Description'};
-    my $name = basename($invpath);
-
-    # ---------- Make sure all the assets exist ----------
-    foreach my $dasset (@{$invitem->{'AssetDependencies'}})
-    {
-        &RequireRemoteAsset($dasset);
-    }
-
-    # ---------- And create the new object ----------
-    my $result = $gRemoteControl->CreateObject($assetid,\@position,\@rotation,\@velocity,$name,$description,$startparam);
-    die "Unable to create the object; " . $result->{_Message} . "\n"
-        if $result->{_Success} <= 0;
-
-    print $result->{ObjectID} . "\n";
-}
 
 # -----------------------------------------------------------------
 # NAME: Main
-# DESC: Main controling routine.
 # -----------------------------------------------------------------
-sub Main {
-    my $cmd = ($#ARGV >= 0) ? shift @ARGV : "HELP";
+sub Main
+{
+    if (! GetOptions(%{$gOptions}))
+    {
+        $gCmdinfo->DumpCommands('dumpinventory','Unknown option');
+    }
 
-    &cGETOBJECT, exit	if ($cmd =~ m/^get$/i);
-    &cPUTOBJECT, exit	if ($cmd =~ m/^put$/i);
+    &InitializeSimian;
+    &InitializeDispatcher;
 
-    &Usage();
+    my $info = $gSimian->GetUser($gIDValue,$gIDType);
+    return unless defined $info;
+
+    my $uuid = $info->{"UserID"};
+    
+    my $params = {
+        'IncludeFolders' => 1,
+        'IncludeItems' => 1,
+        'ChildrenOnly' => 1
+    };
+
+    my $path;
+    my %folders;
+
+    my $root = &FindInventoryNodeByPath($uuid, $gPath);
+
+    my @itemQ = ( $root );
+    while (@itemQ)
+    {
+        my $itemID = shift(@itemQ);
+        my $items = $gSimian->GetInventoryNode($itemID,$uuid,$params);
+
+        $path = $folders{$itemID}{'path'} || '';
+        &ProcessFolder($path);
+
+        foreach my $item (sort { $b->{'Name'} cmp $a->{'Name'} } @{$items})
+        {
+            my $id = $item->{"ID"};
+            next if $id eq $itemID;
+
+            if ($item->{"Type"} eq "Folder")
+            {
+                unshift(@itemQ,$id);
+                $folders{$id}{'path'} = $path . '/' . $item->{"Name"};
+            }
+            else
+            {
+                &ProcessItem($path,$item)
+            }
+        }
+    }
 }
 
-# -----------------------------------------------------------------
 &Main;
+
+
+

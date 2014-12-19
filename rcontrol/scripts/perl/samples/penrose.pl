@@ -75,7 +75,6 @@ Mic Bowman, E<lt>mic.bowman@intel.comE<gt>
 
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use lib "/share/opensim/lib";
 
 my $gCommand = $FindBin::Script;
 
@@ -88,8 +87,8 @@ use FileHandle;
 use Getopt::Long;
 use Term::ReadKey;
 
-use RemoteControl;
-use Helper::CommandInfo;
+use OpenSim::RemoteControl;
+use OpenSim::RemoteControl::Stream;
 
 my $gTileCount = 0;
 my $gRemoteControl;
@@ -160,8 +159,8 @@ sub CheckGlobals
     $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
 
     # choose whether to run UDP or HTTP protocols
-    $gRemoteControl = RemoteControlStream->new(URL => $gSynchEP, SCENE => $gSceneName, REQUESTTYPE => ($gUseAsync ? 'async' : 'sync'));
-    ## $gRemoteControl = RemoteControlPacket->new(ENDPOINT => $gAsyncEP, SCENE => $gSceneName);
+    $gRemoteControl = OpenSim::RemoteControl::Stream->new(URL => $gSynchEP, SCENE => $gSceneName, REQUESTTYPE => ($gUseAsync ? 'async' : 'sync'));
+    ## $gRemoteControl = OpenSim::RemoteControl::Packet->new(ENDPOINT => $gAsyncEP, SCENE => $gSceneName);
     $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
 
     if (defined $gContainerName) 

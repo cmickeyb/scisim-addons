@@ -75,7 +75,6 @@ Mic Bowman, E<lt>mic.bowman@intel.comE<gt>
 
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use lib "/share/opensim/lib";
 
 my $gCommand = $FindBin::Script;
 
@@ -85,7 +84,8 @@ use JSON;
 use Getopt::Long;
 use Term::ReadKey;
 
-use RemoteControl;
+use OpenSim::RemoteControl;
+use OpenSim::RemoteControl::Stream;
 use Helper::CommandInfo;
 
 my @gDomainList = ();
@@ -204,7 +204,8 @@ sub CheckGlobals
     $gAsyncEP = $ENV{'OS_REMOTECONTROL_UDP'} unless defined $gAsyncEP;
     $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
 
-    $gRemoteControl = RemoteControlStream->new(URL => $gSynchEP, SCENE => $gSceneName, REQUESTTYPE => ($gUseAsync ? 'async' : 'sync'));
+    $gRemoteControl = OpenSim::RemoteControl::Stream->new(URL => $gSynchEP, SCENE => $gSceneName, REQUESTTYPE => ($gUseAsync ? 'async' : 'sync'));
+    $gRemoteControl->{SCENE} = $gSceneName;
     $gRemoteControl->{DOMAINLIST} = \@gDomainList if @gDomainList;
 }
     
@@ -389,6 +390,10 @@ sub cREMOTECHAT
 # DESC: 
 # -----------------------------------------------------------------
 $gCmdinfo->AddCommand('find','find objects in the scene that match a query');
+$gCmdinfo->AddCommandParams('find', '--min', ' <float> <float> <float>', 'minimum region coordinate');
+$gCmdinfo->AddCommandParams('find', '--max', ' <float> <float> <float>', 'maximum region coordinate');
+$gCmdinfo->AddCommandParams('find', '--pattern', ' <regex>', 'pattern for selecting objects by name');
+$gCmdinfo->AddCommandParams('find', '--owner', ' <uuid>', 'unique identifer for an avatar');
 
 sub cFINDOBJECTS
 {
@@ -416,12 +421,15 @@ sub cFINDOBJECTS
         print STDERR "Operation failed; " . $result->{_Message} . "\n";
     }
 
+    printf("%-20s %-36s %-36s\t%s\n",'Name', 'Object ID', 'Owner ID', 'Position');
     foreach my $obj (@{$result->{Objects}})
     {
         my $details = $gRemoteControl->GetObjectData($obj);
         if ($details->{_Success} > 0)
         {
-            printf("%s\t%s\t%s\t<%03.2f,%03.2f,%03.2f>\n",$details->{Name},$obj,$details->{OwnerID},@{$details->{Position}});
+            $name = $details->{Name};
+            $name = substr($name,0,17) . "..." if length($name) > 20;
+            printf("%-20s %-36s %-36s\t<%03.2f,%03.2f,%03.2f>\n",$name,$obj,$details->{OwnerID},@{$details->{Position}});
         }
     }
 }
@@ -785,6 +793,14 @@ sub cSETAPPEARANCE
     }
 }
 
+
+# -----------------------------------------------------------------
+# NAME: cHELP
+# -----------------------------------------------------------------
+sub cHELP
+{
+    $gCmdinfo->DumpCommands();
+}
 
 # -----------------------------------------------------------------
 # NAME: Main

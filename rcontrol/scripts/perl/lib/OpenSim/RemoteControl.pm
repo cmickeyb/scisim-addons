@@ -1,89 +1,44 @@
-# -----------------------------------------------------------------
-# Copyright (c) 2012 Intel Corporation
-# All rights reserved.
-
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
-
-#     * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
-
-#     * Redistributions in binary form must reproduce the above
-#       copyright notice, this list of conditions and the following
-#       disclaimer in the documentation and/or other materials provided
-#       with the distribution.
-
-#     * Neither the name of the Intel Corporation nor the names of its
-#       contributors may be used to endorse or promote products derived
-#       from this software without specific prior written permission.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-# EXPORT LAWS: THIS LICENSE ADDS NO RESTRICTIONS TO THE EXPORT LAWS OF
-# YOUR JURISDICTION. It is licensee's responsibility to comply with any
-# export regulations applicable in licensee's jurisdiction. Under
-# CURRENT (May 2000) U.S. export regulations this software is eligible
-# for export from the U.S. and can be downloaded by or otherwise
-# exported or reexported worldwide EXCEPT to U.S. embargoed destinations
-# which include Cuba, Iraq, Libya, North Korea, Iran, Syria, Sudan,
-# Afghanistan and any other country to which the U.S. has embargoed
-# goods and services.
-# -----------------------------------------------------------------
-
-=head1 NAME
-
-name
-
-=head1 SYNOPSIS
-
-synopsis
-
-=head1 DESCRIPTION
-
-description
-
-=head2 COMMON OPTIONS
-
-=head2 COMMANDS
-
-=head1 CUSTOMIZATION
-
-customization
-
-=head1 SEE ALSO
-
-see also
-
-=head1 AUTHOR
-
-Mic Bowman, E<lt>mic.bowman@intel.comE<gt>
-
-=cut
+### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+###
+### PACKAGE: OpenSim::RemoteControl
+###
+### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+package OpenSim::RemoteControl;
 
 use 5.010001;
 use strict;
 use warnings;
 
-our $AUTOLOAD;
-our $VERSION = sprintf "%s", '$Revision: 1.0 $ ' =~ /\$Revision:\s+([^\s]+)/;
+=head1 NAME
 
-### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-###
-### PACKAGE: RemoteControl
-###
-### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-package RemoteControl;
+OpenSim::RemoteControl - A package for building clients that access and managing scenes in the OpenSimulator 3D application platform
+
+=head1 VERSION
+
+Version 0.04
+
+=cut
+
+our $VERSION = '0.4';
+
+=head1 SYNOPSIS
+
+OpenSim::RemoteControl provides a procedural interface for sending and
+receiving OpenSim Dispatcher messages. These messages provide a means of
+interacting with an OpenSim scene including the objects in the scene,
+avatars, terrain, and others.
+
+    $rc = OpenSim::RemoteControl::Stream->new(URL => 'http://127.0.0.1:700', SCENE => 'My Region');
+    $rc->CAPABILITY = $rc->AuthenticateAvatarByName("Sam Spade", "mypass", 3600);
+
+=head1 EXPORT
+
+A list of functions that can be exported.  You can delete this section
+if you don't export anything, such as for a purely object-oriented module.
+
+=head1 SUBROUTINES/METHODS
+
+=cut
 
 use Carp;
 use JSON;
@@ -91,14 +46,11 @@ use JSON;
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64;
 
-my @gDomainList = qw/Dispatcher RemoteControl RemoteSensor/;
-
-## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-## Dispatcher Fields
-## XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+my @gDomainList = qw/Dispatcher RemoteControl/;
 
 # -----------------------------------------------------------------
-# NAME: AuthenticateAvatarByUUID
+=head2 AuthenticateAvatarByUUID
+=cut
 # -----------------------------------------------------------------
 sub AuthenticateAvatarByUUID
 {
@@ -109,14 +61,14 @@ sub AuthenticateAvatarByUUID
     $params->{'userid'} = $uuid;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
-    ## $params->{'domainlist'} = \@gDomainList;
     $params->{'domainlist'} = $self->{DOMAINLIST};
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',$params);
 }
 
 # -----------------------------------------------------------------
-# NAME: AuthenticateAvatarByName
+=head2 AuthenticateAvatarByName
+=cut
 # -----------------------------------------------------------------
 sub AuthenticateAvatarByName
 {
@@ -129,14 +81,14 @@ sub AuthenticateAvatarByName
     $params->{'lastname'} = $lname;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
-    ## $params->{'domainlist'} = \@gDomainList;
     $params->{'domainlist'} = $self->{DOMAINLIST};
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',$params);
 }
 
 # -----------------------------------------------------------------
-# NAME: AuthenticateAvatarByEmail
+=head2 AuthenticateAvatarByEmail
+=cut
 # -----------------------------------------------------------------
 sub AuthenticateAvatarByEmail
 {
@@ -147,14 +99,14 @@ sub AuthenticateAvatarByEmail
     $params->{'emailaddress'} = $email;
     $params->{'hashedpasswd'} = '$1$' . md5_hex($pass);
     $params->{'lifespan'} = $lifespan if defined $lifespan;
-    ## $params->{'domainlist'} = \@gDomainList;
     $params->{'domainlist'} = $self->{DOMAINLIST};
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.CreateCapabilityRequest',$params);
 }
 
 # -----------------------------------------------------------------
-# NAME: RenewCapability
+=head2 RenewCapability
+=cut
 # -----------------------------------------------------------------
 sub RenewCapability
 {
@@ -163,13 +115,13 @@ sub RenewCapability
 
     my $params = {};
     $params->{'lifespan'} = $lifespan if defined $lifespan;
-    $params->{'domainlist'} = $self->{DOMAINLIST};
 
     return $self->_PostRequest('Dispatcher','Dispatcher.Messages.RenewCapabilityRequest',$params);
 }
 
 # -----------------------------------------------------------------
-# NAME: Info
+=head2 Info
+=cut
 # -----------------------------------------------------------------
 sub Info
 {
@@ -178,7 +130,8 @@ sub Info
 }
 
 # -----------------------------------------------------------------
-# NAME: MessageFormatRequest
+=head2 MessageFormatRequest
+=cut
 # -----------------------------------------------------------------
 sub MessageFormatRequest
 {
@@ -191,7 +144,8 @@ sub MessageFormatRequest
 }
 
 # -----------------------------------------------------------------
-# NAME: CreateEndPoint
+=head2 CreateEndPoint
+=cut
 # -----------------------------------------------------------------
 sub CreateEndPoint
 {
@@ -207,7 +161,8 @@ sub CreateEndPoint
 }
 
 # -----------------------------------------------------------------
-# NAME: RenewEndPoint
+=head2 RenewEndPoint
+=cut
 # -----------------------------------------------------------------
 sub RenewEndPoint
 {
@@ -222,7 +177,8 @@ sub RenewEndPoint
 }
 
 # -----------------------------------------------------------------
-# NAME: CloseEndPoint
+=head2 CloseEndPoint
+=cut
 # -----------------------------------------------------------------
 sub CloseEndPoint
 {
@@ -236,7 +192,8 @@ sub CloseEndPoint
 }
 
 # -----------------------------------------------------------------
-# NAME: SendChatMessage
+=head2 SendChatMessage
+=cut
 # -----------------------------------------------------------------
 sub SendChatMessage
 {
@@ -253,7 +210,8 @@ sub SendChatMessage
 
 
 # -----------------------------------------------------------------
-# NAME: GetAvatarAppearance
+=head2 GetAvatarAppearance
+=cut
 # -----------------------------------------------------------------
 sub GetAvatarAppearance
 {
@@ -267,7 +225,8 @@ sub GetAvatarAppearance
 }
 
 # -----------------------------------------------------------------
-# NAME: SetAvatarAppearance
+=head2 SetAvatarAppearance
+=cut
 # -----------------------------------------------------------------
 sub SetAvatarAppearance
 {
@@ -282,7 +241,8 @@ sub SetAvatarAppearance
 }
 
 # -----------------------------------------------------------------
-# NAME: FindObjects
+=head2 FindObjects
+=cut
 # -----------------------------------------------------------------
 sub FindObjects
 {
@@ -299,7 +259,8 @@ sub FindObjects
 }
 
 # -----------------------------------------------------------------
-# NAME: CreateObject
+=head2 CreateObject
+=cut
 # -----------------------------------------------------------------
 sub CreateObject
 {
@@ -319,7 +280,8 @@ sub CreateObject
 }
 
 # -----------------------------------------------------------------
-# NAME: DeleteObject
+=head2 DeleteObject
+=cut
 # -----------------------------------------------------------------
 sub DeleteObject
 {
@@ -333,7 +295,8 @@ sub DeleteObject
 }
 
 # -----------------------------------------------------------------
-# NAME: DeleteAllObject
+=head2 DeleteAllObject
+=cut
 # -----------------------------------------------------------------
 sub DeleteAllObjects
 {
@@ -344,7 +307,8 @@ sub DeleteAllObjects
 }
 
 # -----------------------------------------------------------------
-# NAME: GetObjectParts
+=head2 GetObjectParts
+=cut
 # -----------------------------------------------------------------
 sub GetObjectParts
 {
@@ -358,7 +322,8 @@ sub GetObjectParts
 }
 
 # -----------------------------------------------------------------
-# NAME: GetObjectInventory
+=head2 GetObjectInventory
+=cut
 # -----------------------------------------------------------------
 sub GetObjectInventory
 {
@@ -372,7 +337,8 @@ sub GetObjectInventory
 }
 
 # -----------------------------------------------------------------
-# NAME: GetObjectData
+=head2 GetObjectData
+=cut
 # -----------------------------------------------------------------
 sub GetObjectData
 {
@@ -386,7 +352,8 @@ sub GetObjectData
 }
 
 # -----------------------------------------------------------------
-# NAME: GetObjectPosition
+=head2 GetObjectPosition
+=cut
 # -----------------------------------------------------------------
 sub GetObjectPosition
 {
@@ -400,7 +367,8 @@ sub GetObjectPosition
 }
 
 # -----------------------------------------------------------------
-# NAME: SetObjectPosition
+=head2 SetObjectPosition
+=cut
 # -----------------------------------------------------------------
 sub SetObjectPosition
 {
@@ -415,7 +383,8 @@ sub SetObjectPosition
 }
 
 # -----------------------------------------------------------------
-# NAME: GetObjectRotation
+=head2 GetObjectRotation
+=cut
 # -----------------------------------------------------------------
 sub GetObjectRotation
 {
@@ -429,7 +398,8 @@ sub GetObjectRotation
 }
 
 # -----------------------------------------------------------------
-# NAME: SetObjectRotation
+=head2 SetObjectRotation
+=cut
 # -----------------------------------------------------------------
 sub SetObjectRotation
 {
@@ -444,7 +414,8 @@ sub SetObjectRotation
 }
 
 # -----------------------------------------------------------------
-# NAME: MessageObject
+=head2 MessageObject
+=cut
 # -----------------------------------------------------------------
 sub MessageObject
 {
@@ -459,7 +430,8 @@ sub MessageObject
 }
 
 # -----------------------------------------------------------------
-# NAME: SetPartPosition
+=head2 SetPartPosition
+=cut
 # -----------------------------------------------------------------
 sub SetPartPosition
 {
@@ -475,7 +447,8 @@ sub SetPartPosition
 }
 
 # -----------------------------------------------------------------
-# NAME: SetPartRotation
+=head2 SetPartRotation
+=cut
 # -----------------------------------------------------------------
 sub SetPartRotation
 {
@@ -491,7 +464,8 @@ sub SetPartRotation
 }
 
 # -----------------------------------------------------------------
-# NAME: SetPartScale
+=head2 SetPartScale
+=cut
 # -----------------------------------------------------------------
 sub SetPartScale
 {
@@ -507,7 +481,8 @@ sub SetPartScale
 }
 
 # -----------------------------------------------------------------
-# NAME: SetPartColor
+=head2 SetPartColor
+=cut
 # -----------------------------------------------------------------
 sub SetPartColor
 {
@@ -524,7 +499,8 @@ sub SetPartColor
 }
 
 # -----------------------------------------------------------------
-# NAME: RegisterTouchCallback
+=head2 RegisterTouchCallback
+=cut
 # -----------------------------------------------------------------
 sub RegisterTouchCallback
 {
@@ -539,7 +515,8 @@ sub RegisterTouchCallback
 }
 
 # -----------------------------------------------------------------
-# NAME: UnregisterTouchCallback
+=head2 UnregisterTouchCallback
+=cut
 # -----------------------------------------------------------------
 sub UnregisterTouchCallback
 {
@@ -556,7 +533,8 @@ sub UnregisterTouchCallback
 
 
 # -----------------------------------------------------------------
-# NAME: TestAsset
+=head2 TestAsset
+=cut
 # -----------------------------------------------------------------
 sub TestAsset
 {
@@ -570,7 +548,8 @@ sub TestAsset
 }
 
 # -----------------------------------------------------------------
-# NAME: GetAsset
+=head2 GetAsset
+=cut
 # -----------------------------------------------------------------
 sub GetAsset
 {
@@ -584,7 +563,8 @@ sub GetAsset
 }
 
 # -----------------------------------------------------------------
-# NAME: GetAssetFromObject
+=head2 GetAssetFromObject
+=cut
 # -----------------------------------------------------------------
 sub GetAssetFromObject
 {
@@ -598,7 +578,8 @@ sub GetAssetFromObject
 }
 
 # -----------------------------------------------------------------
-# NAME: GetDependentAssets
+=head2 GetDependentAssets
+=cut
 # -----------------------------------------------------------------
 sub GetDependentAssets
 {
@@ -612,7 +593,8 @@ sub GetDependentAssets
 }
 
 # -----------------------------------------------------------------
-# NAME: AddAsset
+=head2 AddAsset
+=cut
 # -----------------------------------------------------------------
 sub AddAsset
 {
@@ -626,25 +608,9 @@ sub AddAsset
 }
 
 # -----------------------------------------------------------------
-# NAME: SensorDataRequest
-# -----------------------------------------------------------------
-sub SensorDataRequest
-{
-    my $self = shift;
-    my ($family, $sensor, $values) = @_;
-
-    my $params = {};
-    $params->{'SensorFamily'} = $family;
-    $params->{'SensorID'} = $sensor;
-    $params->{'SensorData'} = $values;
-
-    return $self->_PostRequest('RemoteSensor','RemoteSensor.Messages.SensorDataRequest',$params);
-}
-
-# -----------------------------------------------------------------
-# NAME: new
-# DESC: Constructor for the object, attributes listed in gAutoFields
-# can be initialized here.
+=head2 new
+Constructor for the object, attributes listed in gAutoFields an be initialized here.
+=cut
 # -----------------------------------------------------------------
 sub new
 {
@@ -668,180 +634,69 @@ sub new
     return $self;
 }
 
-### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-###
-### PACKAGE: RemoteControlStream
-###
-### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-package RemoteControlStream;
+=head1 AUTHOR
 
-use Carp;
-use JSON;
+Mic Bowman, C<< <cmickeyb at gmail.com> >>
 
-use LWP::UserAgent;
-use LWP::ConnCache;
-require HTTP::Request;
+=head1 BUGS
 
-use base 'RemoteControl';
+Please report any bugs or feature requests to C<bug-opensim-remotecontrol at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=OpenSim-RemoteControl>.  I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
 
-# -----------------------------------------------------------------
-# NAME: new
-# -----------------------------------------------------------------
-sub new
-{
-    my $proto = shift;
-    my $parms = ($#_ == 0) ? { %{ (shift) } } : { @_ };
+=head1 SUPPORT
 
-    my $class = ref($proto) || $proto;
-    my $self = RemoteControl->new($parms);
+You can find documentation for this module with the perldoc command.
 
-    bless $self, $class;
+    perldoc OpenSim::RemoteControl
 
-    # Copy the parameters into the object
-    my %gAutoFields = ( URL => undef );
-    $self->{_permitted} = \%gAutoFields;
+=head1 ACKNOWLEDGEMENTS
 
-    # Set the initial values for all the parameters
-    foreach my $key (keys %{$self->{_permitted}}) {
-        $self->{$key} = $parms->{$key} || $self->{_permitted}->{$key};
-    }
 
-    $self->{_ua} = LWP::UserAgent->new;
-    $self->{_ua}->agent("OpenSimRemoteControl/0.1 ");
-    $self->{_ua}->timeout(30);
-    $self->{_ua}->conn_cache(LWP::ConnCache->new()); # opensim seems to barf if this isn't here
+=head1 LICENSE AND COPYRIGHT
 
-    return $self;
-}
+Copyright (c) 2012, 2014 Intel Corporation
+All rights reserved.
 
-# -----------------------------------------------------------------
-# NAME: _PostRequest
-# -----------------------------------------------------------------
-sub _PostRequest()
-{
-    my $self = shift;
-    my $domain = shift;
-    my $operation = shift;
-    my ($params) = @_;
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
 
-    croak 'Synchronous enpoint undefined' unless defined $self->{URL};
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
 
-    # Create a request
-    $params->{'$type'} = $operation;
-    $params->{'_capability'} = $self->{CAPABILITY} if defined $self->{CAPABILITY};
-    $params->{'_scene'} = $self->{SCENE} if defined $self->{SCENE};
-    $params->{'_domain'} = $domain;
-    $params->{'_asyncrequest'} = ($self->{REQUESTTYPE} eq 'async' ? 1 : 0);
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
 
-    my $content = to_json($params,{canonical => 1});
+    * Neither the name of the Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
 
-    # print STDERR "CONTENT: $content\n";
-    # print STDERR "URL: " . $self->{URL} . "\n";
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-    my $request = HTTP::Request->new;
-    $request->method('POST');
-    $request->uri($self->{URL});
-    $request->header('Content-Type' => 'application/json');
-    $request->header('Content-Length' => length $content);
-    $request->header('Connection' => 'keep-alive');
-    $request->content($content);
+EXPORT LAWS: THIS LICENSE ADDS NO RESTRICTIONS TO THE EXPORT LAWS OF
+YOUR JURISDICTION. It is licensee's responsibility to comply with any
+export regulations applicable in licensee's jurisdiction. Under
+CURRENT (May 2000) U.S. export regulations this software is eligible
+for export from the U.S. and can be downloaded by or otherwise
+exported or reexported worldwide EXCEPT to U.S. embargoed destinations
+which include Cuba, Iraq, Libya, North Korea, Iran, Syria, Sudan,
+Afghanistan and any other country to which the U.S. has embargoed
+goods and services.
 
-    my $result = $self->{_ua}->request($request);
-    if (! $result->is_success)
-    {
-        croak "Message transmission failed; " . $result->status_line . "\n";
-    }
-
-    # print STDERR "RESULT: " . $result->content . "\n";
-
-    my $results;
-    eval { $results = decode_json($result->content); };
-    if ($@)
-    {
-        croak "JSON decode of string <" . $result->content . "> failed\n";
-    }
-
-    # if ($results->{"_Success"} <= 0)
-    # {
-    #     my $msg = $results->{"_Message"} || "unknown error";
-    #     carp "Operation failed; $msg\n";
-    # }
-
-    return $results;
-}
-
-### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-###
-### PACKAGE: RemoteControlPacket
-###
-### XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-package RemoteControlPacket;
-
-use Carp;
-use JSON;
-
-use IO::Socket;
-
-use base 'RemoteControl';
-
-# -----------------------------------------------------------------
-# NAME: new 
-# -----------------------------------------------------------------
-sub new
-{
-    my $proto = shift;
-    my $parms = ($#_ == 0) ? { %{ (shift) } } : { @_ };
-
-    my $class = ref($proto) || $proto;
-    my $self = RemoteControl->new($parms);
-    
-    bless $self, $class;
-
-    # Copy the parameters into the object
-    my %gAutoFields = ( ENDPOINT => undef );
-    $self->{_permitted} = \%gAutoFields;
-
-    # Set the initial values for all the parameters
-    foreach my $key (keys %{$self->{_permitted}}) {
-        $self->{$key} = $parms->{$key} || $self->{_permitted}->{$key};
-    }
-
-    return $self;
-}
-
-# -----------------------------------------------------------------
-# NAME: _PostRequest
-# -----------------------------------------------------------------
-sub _PostRequest()
-{
-    my $self = shift;
-    my $domain = shift;
-    my $operation = shift;
-    my ($params) = @_;
-
-    croak 'Asynchronous enpoint undefined' unless defined $self->{ENDPOINT};
-
-    # Create a request
-    $params->{'$type'} = $operation;
-    $params->{'_capability'} = $self->{CAPABILITY} if defined $self->{CAPABILITY};
-    $params->{'_scene'} = $self->{SCENE} if defined $self->{SCENE};
-    $params->{'_domain'} = $domain;
-    $params->{'_asyncrequest'} = 1;
-
-    my $content = to_json($params,{canonical => 1});
-    ## print STDERR "CONTENT:\n$content\n";
-
-    my $socket = new IO::Socket::INET( PeerAddr => $self->{ENDPOINT}, Proto => 'udp' );
-    eval { $socket->send($content); $socket->close(); };
-    if ($@)
-    {
-        croak "Message transmission failed; $!\n";
-    }
-
-    my $results = { _Success => 2 };
-    return $results;
-}
-
+=cut
 
 1;
 __END__

@@ -75,7 +75,6 @@ Mic Bowman, E<lt>mic.bowman@intel.comE<gt>
 
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use lib "/share/opensim/lib";
 
 my $gCommand = $FindBin::Script;
 
@@ -91,8 +90,8 @@ use FileHandle;
 use Getopt::Long;
 use Term::ReadKey;
 
-use RemoteControl;
-use Helper::CommandInfo;
+use OpenSim::RemoteControl;
+use OpenSim::RemoteControl::Stream;
 
 my $gRemoteControl;
 
@@ -150,7 +149,7 @@ sub CheckGlobals
     $gEndPointURL = $ENV{'OS_REMOTECONTROL_URL'} unless defined $gEndPointURL;
     $gSceneName = $ENV{'OS_REMOTECONTROL_SCENE'} unless defined $gSceneName;
 
-    $gRemoteControl = RemoteControlStream->new(URL => $gEndPointURL, SCENE => $gSceneName);
+    $gRemoteControl = OpenSim::RemoteControl::Stream->new(URL => $gEndPointURL, SCENE => $gSceneName);
     $gRemoteControl->{CAPABILITY} = &AuthenticateRequest;
 }
     
