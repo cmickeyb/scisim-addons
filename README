@@ -6,3 +6,7 @@ for the ScienceSim grid. In general, the modules are intended to enable
 the use of OpenSim as a platform for collaborative visualization though 
 in some cases their usefulness extends far beyond the educational domain.
 
+NOTE: code for the dispatcher and remote control projects has been moved
+to https://github.com/cmickeyb/dispatcher
+
+
